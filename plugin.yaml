@@ -13,10 +13,10 @@ description: |-
     ```bash
     # first create an azure keyvault secret
     yaml=$(cat <<'EOF' | base64
-  argocd:
-    git:
-      sshkey: ssh-rsa mysupersecretprivatersarepositorykey
-    EOF
+    argocd:
+      git:
+        sshkey: ssh-rsa mysupersecretprivatersarepositorykey
+      EOF
     )
     
     az keyvault secret set --name argocd.yaml --vault-name helm-keyvault-test --value $yaml --encoding base64
