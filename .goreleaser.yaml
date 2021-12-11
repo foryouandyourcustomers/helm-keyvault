@@ -7,7 +7,6 @@ builds:
     goos:
       - linux
       - darwin
-      - windows
     goarch:
       - "386"
       - amd64
@@ -21,6 +20,7 @@ builds:
       - -trimpath
     ldflags:
       - -s -w
+    main: ./cmd/helm-keyvault
 
 universal_binaries:
   - replace: false
@@ -33,9 +33,6 @@ archives:
       windows: Windows
       386: i386
       amd64: x86_64
-    format_overrides:
-      - goos: windows
-        format: zip
     files:
       - plugin.yaml
 
