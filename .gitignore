@@ -1,2 +1,3 @@
 helm-keyvault
+!cmd/helm-keyvault
 .env
