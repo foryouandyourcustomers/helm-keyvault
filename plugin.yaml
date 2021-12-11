@@ -12,7 +12,7 @@ description: |-
   parameter looks like this
   
 
-  ```bash
+  ```
   # first create an azure keyvault secret
   yaml=$(cat <<'EOF' | base64
   argocd:
@@ -23,7 +23,7 @@ description: |-
   az keyvault secret set --name argocd.yaml --vault-name helm-keyvault-test --value $yaml --encoding base64
   ```  
   
-  ```bash
+  ```
   --values keyvault://helm-keyvault-test.vault.azure.net/secrets/argocd-yaml
   ```
   
