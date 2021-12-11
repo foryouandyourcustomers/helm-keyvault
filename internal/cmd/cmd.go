@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"fmt"
 	"github.com/foryouandyourcustomers/helm-keyvault/internal/keyvault"
 	log "github.com/sirupsen/logrus"
 	"net/url"
@@ -29,5 +30,5 @@ func Download(uri string) {
 
 	// get secret from keyvault and print it
 	secret := keyvault.GetSecret(kv, sn, sv)
-	print(secret.Decode())
+	fmt.Print(secret.Decode())
 }
