@@ -21,13 +21,18 @@ var (
 func init() {
 	// first try to get authorizer from cli
 	var err error
-	log.Debug("Try to get azure login via cli / identity")
-	authorizer, err = kvauth.NewAuthorizerFromCLI()
+
+	log.Debug("Try to get authentication from file")
+	authorizer, err = kvauth.NewAuthorizerFromFile()
 	if err != nil {
-		log.Debug("Unable to get authorizer from cli, trying from env")
+		log.Debug("Try to get credentials from envrionment")
 		authorizer, err = kvauth.NewAuthorizerFromEnvironment()
 		if err != nil {
-			log.Fatal("Unable to login to azure")
+			log.Debug("Get login info from azure cli")
+			authorizer, err = kvauth.NewAuthorizerFromCLI()
+			if err != nil {
+				panic("Unable to authenticate with AUTH file, ENV vars and local cli. Aborting.")
+			}
 		}
 	}
 }
@@ -37,7 +42,6 @@ func GetSecret(kv string, sn string, sv string) secrets.Secret {
 
 	c := keyvault.New()
 	c.Authorizer = authorizer
-
 	s, err := c.GetSecret(context.Background(), fmt.Sprintf("https://%s", kv), sn, sv)
 	if err != nil {
 		panic(err)
