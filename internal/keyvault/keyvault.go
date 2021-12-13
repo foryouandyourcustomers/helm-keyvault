@@ -38,19 +38,34 @@ func init() {
 }
 
 // GetSecret - return a secret object
-func GetSecret(kv string, sn string, sv string) secrets.Secret {
+func GetSecret(kv string, sn string, sv string) (secrets.Secret, error) {
 
 	c := keyvault.New()
 	c.Authorizer = authorizer
 	s, err := c.GetSecret(context.Background(), fmt.Sprintf("https://%s", kv), sn, sv)
 	if err != nil {
-		panic(err)
+		return secrets.Secret{}, err
 	}
 
 	return secrets.Secret{
-		*s.ID,
-		sn,
-		path.Base(*s.ID),
-		*s.Value,
+		Id:      *s.ID,
+		Name:    sn,
+		Version: path.Base(*s.ID),
+		Value:   *s.Value,
+	}, nil
+}
+
+// PutSecret - put secret into keyvault
+func PutSecret(kv string, sn string, cn string) error {
+	c := keyvault.New()
+	c.Authorizer = authorizer
+
+	ct := "base64"
+	sp := keyvault.SecretSetParameters{
+		Value:       &cn,
+		ContentType: &ct,
 	}
+
+	_, err := c.SetSecret(context.Background(), fmt.Sprintf("https://%s", kv), sn, sp)
+	return err
 }

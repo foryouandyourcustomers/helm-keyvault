@@ -13,7 +13,7 @@ Install the plugin with `helm plugin install`
 
 ```bash
 # install with direct download
-helm plugin install https://github.com/foryouandyourcustomers/helm-keyvault/releases/download/0.0.2/helm-keyvault_Linux_x86_64.tar.gz
+helm plugin install https://github.com/foryouandyourcustomers/helm-keyvault/releases/download/0.1.0/helm-keyvault_Linux_x86_64.tar.gz
 
 # if you receive an error message 'fatal: repository github.com/foryouandyourcustomers/helm-keyvault/releases/download/0.0.2/helm-keyvault_Linux_x86_64.tar.gz/ not found 
 # your helm cli can't handle tar downloads (should be fixed in helm cli v3.8!). You need to install the plugin manually
@@ -68,18 +68,29 @@ yaml=$(cat <<'EOF' | base64
 argocd:
   git:
     sshkey: ssh-rsa mysupersecretprivatersarepositorykey
-EOF
+  EOF
 )
 
 az keyvault secret set --name argocd.yaml --vault-name helm-keyvault-test --value $yaml --encoding base64
-```  
+```
+
+You can also use the helm-keyvault utility to write the secret
+```bash
+cat <<'EOF' > /tmp/values.yaml
+argocd:
+  git:
+    sshkey: ssh-rsa mysupersecretprivatersarepositorykey
+EOF
+
+helm keyvault secret put --file /tmp/values.yaml --id keyvault+secret://helm-keyvault-test.vault.azure.net/secrets/argocd-yaml
+```
 
 Next use the keyvault plugin to retrieve the generated secret during helm execution by defining
-keyvault://` as url for the values file.
+keyvault+secret://` as url for the values file.
 
 ```bash
 # downlaod the latest secret
---values keyvault://helm-keyvault-test.vault.azure.net/secrets/argocd-yaml
+--values keyvault+secret://helm-keyvault-test.vault.azure.net/secrets/argocd-yaml
 # downlaod the secret with a specific verion
---values keyvault://helm-keyvault-test.vault.azure.net/secrets/argocd-yaml/2d6e0430c0724ad1bdc277af8b549c57
+--values keyvault+secret://helm-keyvault-test.vault.azure.net/secrets/argocd-yaml/2d6e0430c0724ad1bdc277af8b549c57
 ```
