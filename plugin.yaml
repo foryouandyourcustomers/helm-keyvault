@@ -1,6 +1,6 @@
-name: "helm-keyvault"
+name: "keyvault"
 version: "0.0.1"
-usage: "Downlaoder plugin to retrieve values from azure keyvault"
+usage: "Azure Keyvault plugin to retrieve and write values from azure keyvault"
 description: |-
     A small little downloader plugin to retrieve values files from azure keyvault.
     
@@ -22,20 +22,32 @@ description: |-
     az keyvault secret set --name argocd.yaml --vault-name helm-keyvault-test --value $yaml --encoding base64
     ```
     
+    You can also use the helm-keyvault utility to write the secret
+    ```bash
+    cat <<'EOF' > /tmp/values.yaml
+    argocd:
+      git:
+        sshkey: ssh-rsa mysupersecretprivatersarepositorykey
+    EOF
+    
+    helm keyvault secret put --file /tmp/values.yaml --id keyvault+secret://helm-keyvault-test.vault.azure.net/secrets/argocd-yaml
+    ```
+    
     Next use the keyvault plugin to retrieve the generated secret during helm execution by defining
-    keyvault://` as url for the values file.
+    keyvault+secret://` as url for the values file.
     
     ```bash
     # downlaod the latest secret
-    --values keyvault://helm-keyvault-test.vault.azure.net/secrets/argocd-yaml
+    --values keyvault+secret://helm-keyvault-test.vault.azure.net/secrets/argocd-yaml
     # downlaod the secret with a specific verion
-    --values keyvault://helm-keyvault-test.vault.azure.net/secrets/argocd-yaml/2d6e0430c0724ad1bdc277af8b549c57
+    --values keyvault+secret://helm-keyvault-test.vault.azure.net/secrets/argocd-yaml/2d6e0430c0724ad1bdc277af8b549c57
     ```
 
 useTunnel: false
-command: "$HELM_BIN"
+ignoreFlags: false
+command: "$HELM_PLUGIN_DIR/helm-keyvault"
 
 downloaders:
-  - command: "helm-keyvault"
+  - command: "helm-keyvault secret download"
     protocols:
-      - "keyvault"
+      - "keyvault+secret"

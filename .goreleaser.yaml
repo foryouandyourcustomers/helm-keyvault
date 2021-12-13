@@ -27,7 +27,7 @@ universal_binaries:
 
 archives:
   - name_template: '{{ .ProjectName }}_{{ .Os }}_{{ .Arch }}{{ if .Arm }}v{{ .Arm }}{{ end }}'
-    wrap_in_directory: 'helm-keyvault'
+    wrap_in_directory: 'keyvault'
     files:
       - plugin.yaml
 

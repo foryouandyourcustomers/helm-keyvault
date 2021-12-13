@@ -12,12 +12,12 @@ type Secret struct {
 }
 
 // Decode - decode the given value from base64 to string
-func (s *Secret) Decode() string {
+func (s *Secret) Decode() (string, error) {
 
 	dec, err := base64.StdEncoding.DecodeString(s.Value)
 	if err != nil {
-		panic(err)
+		return "", err
 	}
 
-	return string(dec)
+	return string(dec), nil
 }
