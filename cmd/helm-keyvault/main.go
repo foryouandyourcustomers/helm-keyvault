@@ -20,6 +20,21 @@ func main() {
 	app := &cli.App{
 		Commands: []*cli.Command{
 			{
+				Name:  "download",
+				Usage: "Downlaod and decode secret from keyvault and print contents to stdout - use with helm downloader plugin",
+				Action: func(c *cli.Context) error {
+					if c.Args().Len() != 4 {
+						return errors.New("Please specify four arguments - command certFile keyFile caFile full-URL")
+					}
+					u := c.Args().Get(3)
+					if len(u) <= 0 {
+						return errors.New("full-URL argument missing")
+					}
+					return cmd.Download(u)
+
+				},
+			},
+			{
 				Name:    "secret",
 				Aliases: []string{"s"},
 				Usage:   "get secret, put secrets, download secrets as values.yaml files",
@@ -42,21 +57,6 @@ func main() {
 						}),
 						Action: func(c *cli.Context) error {
 							return cmd.PutSecret(c.String("id"), c.String("file"))
-						},
-					},
-					{
-						Name:  "download",
-						Usage: "Downlaod and decode secret from keyvault and print contents to stdout - use with helm downloader plugin",
-						Action: func(c *cli.Context) error {
-							if c.Args().Len() != 4 {
-								return errors.New("Please specify four arguments - command certFile keyFile caFile full-URL")
-							}
-							u := c.Args().Get(3)
-							if len(u) <= 0 {
-								return errors.New("Url argument missing")
-							}
-							return cmd.DownloadSecret(u)
-
 						},
 					},
 				},
