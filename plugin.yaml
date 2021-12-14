@@ -48,6 +48,6 @@ ignoreFlags: false
 command: "$HELM_PLUGIN_DIR/helm-keyvault"
 
 downloaders:
-  - command: "helm-keyvault secret download"
+  - command: "helm-keyvault download"
     protocols:
       - "keyvault+secret"
