@@ -56,7 +56,7 @@ func GetSecret(kv string, sn string, sv string) (secrets.Secret, error) {
 }
 
 // PutSecret - put secret into keyvault
-func PutSecret(kv string, sn string, cn string) error {
+func PutSecret(kv string, sn string, cn string) (keyvault.SecretBundle, error) {
 	c := keyvault.New()
 	c.Authorizer = authorizer
 
@@ -66,6 +66,9 @@ func PutSecret(kv string, sn string, cn string) error {
 		ContentType: &ct,
 	}
 
-	_, err := c.SetSecret(context.Background(), fmt.Sprintf("https://%s", kv), sn, sp)
-	return err
+	s, err := c.SetSecret(context.Background(), fmt.Sprintf("https://%s", kv), sn, sp)
+	if err != nil {
+		return keyvault.SecretBundle{}, err
+	}
+	return s, nil
 }

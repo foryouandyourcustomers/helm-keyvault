@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"encoding/base64"
+	"encoding/json"
 	"fmt"
 	"github.com/foryouandyourcustomers/helm-keyvault/internal/keyvault"
 	"io/ioutil"
@@ -46,7 +47,7 @@ func PutSecret(id string, f string) error {
 
 	// parse given id into its keyvault components
 	su, err := newSecretUri(id)
-	fmt.Println(su)
+
 	if err != nil {
 		return err
 	}
@@ -58,11 +59,16 @@ func PutSecret(id string, f string) error {
 	}
 	e := base64.StdEncoding.EncodeToString(c)
 
-	err = keyvault.PutSecret(su.Keyvault, su.Name, e)
+	s, err := keyvault.PutSecret(su.Keyvault, su.Name, e)
 	if err != nil {
 		return err
 	}
 
+	res, err := json.Marshal(s)
+	if err != nil {
+		return err
+	}
+	fmt.Println(string(res))
 	return nil
 }
 
