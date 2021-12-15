@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/Azure/go-autorest/autorest"
+	"github.com/Azure/go-autorest/autorest/azure"
 	log "github.com/sirupsen/logrus"
 	"path"
 
@@ -78,8 +79,10 @@ func ListSecrets(kv string) (secrets.SecretList, error) {
 	c := keyvault.New()
 	c.Authorizer = authorizer
 
+	baseurl := fmt.Sprintf("https://%s.%s", kv, azure.PublicCloud.KeyVaultDNSSuffix)
+
 	ctx := context.Background()
-	siter, err := c.GetSecretsComplete(ctx, "https://"+kv+".vault.azure.net", nil)
+	siter, err := c.GetSecretsComplete(ctx, baseurl, nil)
 	if err != nil {
 		log.Fatalf("unable to get list of secrets: %v\n", err)
 	}
@@ -90,7 +93,7 @@ func ListSecrets(kv string) (secrets.SecretList, error) {
 		i := siter.Value()
 
 		key := path.Base(*i.ID)
-		b, err := c.GetSecret(context.Background(), "https://"+kv+".vault.azure.net", key, "")
+		b, err := c.GetSecret(context.Background(), baseurl, key, "")
 		if err != nil {
 			return secrets.SecretList{}, err
 		}
