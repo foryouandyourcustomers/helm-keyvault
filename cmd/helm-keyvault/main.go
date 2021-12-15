@@ -48,6 +48,21 @@ func main() {
 						},
 					},
 					{
+						Name:  "list",
+						Usage: "List all secrets in the keyvault",
+						Flags: []cli.Flag{
+							&cli.StringFlag{
+								Name:     "keyvault",
+								Aliases:  []string{"kv"},
+								Usage:    "Name of the keyvault",
+								Required: true,
+							},
+						},
+						Action: func(c *cli.Context) error {
+							return cmd.ListSecrets(c.String("keyvault"))
+						},
+					},
+					{
 						Name:  "put",
 						Usage: "Read file, base64 encode it and put it into keyvault",
 						Flags: append(sf, &cli.StringFlag{

@@ -7,8 +7,12 @@ import (
 type Secret struct {
 	Id      string
 	Name    string
-	Version string
-	Value   string
+	Version string `json:",omitempty"`
+	Value   string `json:",omitempty"`
+}
+
+type SecretList struct {
+	Secrets []Secret
 }
 
 // Decode - decode the given value from base64 to string

@@ -2,7 +2,9 @@ package cmd
 
 import (
 	"encoding/base64"
+	"encoding/json"
 	"fmt"
+	"github.com/foryouandyourcustomers/helm-keyvault/internal/keyvault"
 	"io/ioutil"
 )
 
@@ -46,5 +48,19 @@ func PutSecret(id string, f string) error {
 		return err
 	}
 	fmt.Print(value)
+	return nil
+}
+
+// ListSecrets - List all secrets in the keyvault
+func ListSecrets(kv string) error {
+	s, err := keyvault.ListSecrets(kv)
+	if err != nil {
+		return err
+	}
+	j, err := json.Marshal(s)
+	if err != nil {
+		return err
+	}
+	fmt.Print(string(j))
 	return nil
 }
