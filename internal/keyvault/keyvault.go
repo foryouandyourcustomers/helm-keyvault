@@ -72,3 +72,35 @@ func PutSecret(kv string, sn string, cn string) (keyvault.SecretBundle, error) {
 	}
 	return s, nil
 }
+
+// ListSecrets - list all secrets in the specified keyvault
+func ListSecrets(kv string) (secrets.SecretList, error) {
+	c := keyvault.New()
+	c.Authorizer = authorizer
+
+	ctx := context.Background()
+	siter, err := c.GetSecretsComplete(ctx, "https://"+kv+".vault.azure.net", nil)
+	if err != nil {
+		log.Fatalf("unable to get list of secrets: %v\n", err)
+	}
+
+	var s secrets.SecretList
+
+	for siter.NotDone() {
+		i := siter.Value()
+
+		key := path.Base(*i.ID)
+		b, err := c.GetSecret(context.Background(), "https://"+kv+".vault.azure.net", key, "")
+		if err != nil {
+			return secrets.SecretList{}, err
+		}
+
+		s.Secrets = append(s.Secrets, secrets.Secret{Id: *b.ID, Name: path.Base(path.Dir(*b.ID))})
+		err = siter.NextWithContext(ctx)
+		if err != nil {
+			return secrets.SecretList{}, err
+		}
+	}
+
+	return s, nil
+}
