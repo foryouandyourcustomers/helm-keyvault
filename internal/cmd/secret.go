@@ -9,16 +9,16 @@ import (
 )
 
 // GetSecret - Get secret from given keyvault
-func GetSecret(id string) error {
+func GetSecret(kv string, sn string, ve string) error {
 
-	// parse given id into its keyvault components
-	su, err := newSecretUri(id)
+	// retrieve and decode base64 encoded secret
+	su, err := keyvault.GetSecret(kv, sn, ve)
 	if err != nil {
 		return err
 	}
 
 	// retrieve and decode secret content
-	value, err := su.download()
+	value, err := su.Decode()
 	if err != nil {
 		return err
 	}
@@ -27,13 +27,7 @@ func GetSecret(id string) error {
 }
 
 // PutSecret - Encode file and put secret into keyvault
-func PutSecret(id string, f string) error {
-
-	// parse given id into its keyvault components
-	su, err := newSecretUri(id)
-	if err != nil {
-		return err
-	}
+func PutSecret(kv string, sn string, f string) error {
 
 	// read file and convert it to base64
 	c, err := ioutil.ReadFile(f)
@@ -42,12 +36,17 @@ func PutSecret(id string, f string) error {
 	}
 	e := base64.StdEncoding.EncodeToString(c)
 
-	// upload the file content'
-	value, err := su.upload(e)
+	s, err := keyvault.PutSecret(kv, sn, e)
 	if err != nil {
 		return err
 	}
-	fmt.Print(value)
+
+	res, err := json.Marshal(s)
+	if err != nil {
+		return err
+	}
+
+	fmt.Print(string(res))
 	return nil
 }
 

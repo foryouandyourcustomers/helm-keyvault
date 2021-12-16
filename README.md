@@ -82,7 +82,7 @@ argocd:
     sshkey: ssh-rsa mysupersecretprivatersarepositorykey
 EOF
 
-helm keyvault secret put --file /tmp/values.yaml --id keyvault+secret://helm-keyvault-test.vault.azure.net/secrets/argocd-yaml
+helm keyvault secret put --file /tmp/values.yaml --id keyvault+secret://helm-keyvault-test/argocd-yaml
 ```
 
 Next use the keyvault plugin to retrieve the generated secret during helm execution by defining
@@ -90,7 +90,7 @@ keyvault+secret://` as url for the values file.
 
 ```bash
 # downlaod the latest secret
---values keyvault+secret://helm-keyvault-test.vault.azure.net/secrets/argocd-yaml
+--values keyvault+secret://helm-keyvault-test/argocd-yaml
 # downlaod the secret with a specific verion
---values keyvault+secret://helm-keyvault-test.vault.azure.net/secrets/argocd-yaml/2d6e0430c0724ad1bdc277af8b549c57
+--values keyvault+secret://helm-keyvault-test/argocd-yaml/2d6e0430c0724ad1bdc277af8b549c57
 ```

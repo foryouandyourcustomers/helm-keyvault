@@ -2,10 +2,13 @@ package keyvault
 
 import (
 	"context"
+	"encoding/base64"
 	"fmt"
 	"github.com/Azure/go-autorest/autorest"
 	"github.com/Azure/go-autorest/autorest/azure"
+	"github.com/foryouandyourcustomers/helm-keyvault/internal/keys"
 	log "github.com/sirupsen/logrus"
+	"os"
 	"path"
 
 	"github.com/foryouandyourcustomers/helm-keyvault/internal/secrets"
@@ -43,7 +46,10 @@ func GetSecret(kv string, sn string, sv string) (secrets.Secret, error) {
 
 	c := keyvault.New()
 	c.Authorizer = authorizer
-	s, err := c.GetSecret(context.Background(), fmt.Sprintf("https://%s", kv), sn, sv)
+
+	baseurl := fmt.Sprintf("https://%s.%s", kv, azure.PublicCloud.KeyVaultDNSSuffix)
+
+	s, err := c.GetSecret(context.Background(), baseurl, sn, sv)
 	if err != nil {
 		return secrets.Secret{}, err
 	}
@@ -61,13 +67,15 @@ func PutSecret(kv string, sn string, cn string) (keyvault.SecretBundle, error) {
 	c := keyvault.New()
 	c.Authorizer = authorizer
 
+	baseurl := fmt.Sprintf("https://%s.%s", kv, azure.PublicCloud.KeyVaultDNSSuffix)
+
 	ct := "base64"
 	sp := keyvault.SecretSetParameters{
 		Value:       &cn,
 		ContentType: &ct,
 	}
 
-	s, err := c.SetSecret(context.Background(), fmt.Sprintf("https://%s", kv), sn, sp)
+	s, err := c.SetSecret(context.Background(), baseurl, sn, sp)
 	if err != nil {
 		return keyvault.SecretBundle{}, err
 	}
@@ -98,7 +106,7 @@ func ListSecrets(kv string) (secrets.SecretList, error) {
 			return secrets.SecretList{}, err
 		}
 
-		s.Secrets = append(s.Secrets, secrets.Secret{Id: *b.ID, Name: path.Base(path.Dir(*b.ID))})
+		s.Secrets = append(s.Secrets, secrets.Secret{Id: *b.ID, Name: path.Base(path.Dir(*b.ID)), Version: path.Base(*b.ID)})
 		err = siter.NextWithContext(ctx)
 		if err != nil {
 			return secrets.SecretList{}, err
@@ -106,4 +114,63 @@ func ListSecrets(kv string) (secrets.SecretList, error) {
 	}
 
 	return s, nil
+}
+
+// ListKeys - list all keys in the specified keyvault
+func ListKeys(kv string) (keys.KeyList, error) {
+	c := keyvault.New()
+	c.Authorizer = authorizer
+
+	baseurl := fmt.Sprintf("https://%s.%s", kv, azure.PublicCloud.KeyVaultDNSSuffix)
+
+	ctx := context.Background()
+	siter, err := c.GetKeysComplete(ctx, baseurl, nil)
+	if err != nil {
+		log.Fatalf("unable to get list of keys: %v\n", err)
+	}
+
+	var k keys.KeyList
+
+	for siter.NotDone() {
+		i := siter.Value()
+
+		key := path.Base(*i.Kid)
+		b, err := c.GetKey(context.Background(), baseurl, key, "")
+		if err != nil {
+			return keys.KeyList{}, err
+		}
+
+		k.Keys = append(k.Keys, keys.Key{Kid: *b.Key.Kid, Name: path.Base(path.Dir(*b.Key.Kid)), Version: path.Base(*b.Key.Kid)})
+		err = siter.NextWithContext(ctx)
+		if err != nil {
+			return keys.KeyList{}, err
+		}
+	}
+
+	return k, nil
+}
+
+// BackupKey - Create a protected backup file for the import into azure keyvault
+func BackupKey(kv string, key string, f string) error {
+	c := keyvault.New()
+	c.Authorizer = authorizer
+
+	baseurl := fmt.Sprintf("https://%s.%s", kv, azure.PublicCloud.KeyVaultDNSSuffix)
+	kb, err := c.BackupKey(context.Background(), baseurl, key)
+	if err != nil {
+		return err
+	}
+
+	fp, err := os.Create(f)
+	if err != nil {
+		return err
+	}
+	defer fp.Close()
+
+	dec, err := base64.RawURLEncoding.DecodeString(*kb.Value)
+	_, err = fp.WriteString(string(dec))
+	if err != nil {
+		return err
+	}
+	return nil
 }

@@ -1,7 +1,6 @@
 package cmd
 
 import (
-	"encoding/json"
 	"errors"
 	"github.com/foryouandyourcustomers/helm-keyvault/internal/keyvault"
 	"net/url"
@@ -12,14 +11,14 @@ type generalUri interface {
 	download() (string, error)
 }
 
-// secretUri - represents an keyvault+secret uri
-type secretUri struct {
+// keyvaultUri - represents an keyvault+secret uri
+type keyvaultUri struct {
 	Keyvault string
 	Name     string
 	Version  string
 }
 
-func (u *secretUri) download() (string, error) {
+func (u *keyvaultUri) download() (string, error) {
 
 	//get secret from keyvault and print it
 	secret, err := keyvault.GetSecret(u.Keyvault, u.Name, u.Version)
@@ -34,21 +33,6 @@ func (u *secretUri) download() (string, error) {
 	return dec, nil
 }
 
-// upload - upload base64 encoded content to keyvault
-func (u *secretUri) upload(c string) (string, error) {
-
-	s, err := keyvault.PutSecret(u.Keyvault, u.Name, c)
-	if err != nil {
-		return "", err
-	}
-
-	res, err := json.Marshal(s)
-	if err != nil {
-		return "", err
-	}
-	return string(res), nil
-}
-
 type fileUri struct {
 	File string
 }
@@ -61,16 +45,17 @@ func (u fileUri) upload() (string, error) {
 	return "", errors.New("not implemented")
 }
 
-func newSecretUri(uri string) (secretUri, error) {
+func newKeyvaultUri(uri string) (keyvaultUri, error) {
 
 	u, err := url.Parse(uri)
 	if err != nil {
-		return secretUri{}, err
+		return keyvaultUri{}, err
 	}
 
-	ur := secretUri{}
+	ur := keyvaultUri{}
 	ur.Keyvault = u.Host
-	s := strings.Split(strings.Replace(u.Path, "/secrets/", "", 1), "/")
+
+	s := strings.Split(strings.Replace(strings.Replace(u.Path, "/keys/", "", 1), "/secrets/", "", 1), "/")
 	ur.Name = s[0]
 	ur.Version = ""
 	if len(s) == 2 {
@@ -86,7 +71,7 @@ func newFileUri(uri string) (fileUri, error) {
 func newUri(uri string) (generalUri, error) {
 
 	if strings.HasPrefix(uri, "secret") {
-		u, err := newSecretUri(uri)
+		u, err := newKeyvaultUri(uri)
 		if err != nil {
 			return nil, err
 		}

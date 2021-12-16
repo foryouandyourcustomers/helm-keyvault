@@ -2,3 +2,4 @@ helm-keyvault
 !cmd/helm-keyvault
 .env
 auth.json
+*.pem
