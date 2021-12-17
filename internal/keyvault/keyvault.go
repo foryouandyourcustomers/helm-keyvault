@@ -6,12 +6,10 @@ import (
 	"fmt"
 	"github.com/Azure/go-autorest/autorest"
 	"github.com/Azure/go-autorest/autorest/azure"
-	"github.com/foryouandyourcustomers/helm-keyvault/internal/keys"
+	"github.com/foryouandyourcustomers/helm-keyvault/internal/structs"
 	log "github.com/sirupsen/logrus"
 	"os"
 	"path"
-
-	"github.com/foryouandyourcustomers/helm-keyvault/internal/secrets"
 
 	"github.com/Azure/azure-sdk-for-go/profiles/latest/keyvault/keyvault"
 	kvauth "github.com/Azure/azure-sdk-for-go/services/keyvault/auth"
@@ -42,7 +40,7 @@ func init() {
 }
 
 // GetSecret - return a secret object
-func GetSecret(kv string, sn string, sv string) (secrets.Secret, error) {
+func GetSecret(kv string, sn string, sv string) (structs.Secret, error) {
 
 	c := keyvault.New()
 	c.Authorizer = authorizer
@@ -51,10 +49,10 @@ func GetSecret(kv string, sn string, sv string) (secrets.Secret, error) {
 
 	s, err := c.GetSecret(context.Background(), baseurl, sn, sv)
 	if err != nil {
-		return secrets.Secret{}, err
+		return structs.Secret{}, err
 	}
 
-	return secrets.Secret{
+	return structs.Secret{
 		Id:      *s.ID,
 		Name:    sn,
 		Version: path.Base(*s.ID),
@@ -83,7 +81,7 @@ func PutSecret(kv string, sn string, cn string) (keyvault.SecretBundle, error) {
 }
 
 // ListSecrets - list all secrets in the specified keyvault
-func ListSecrets(kv string) (secrets.SecretList, error) {
+func ListSecrets(kv string) (structs.SecretList, error) {
 	c := keyvault.New()
 	c.Authorizer = authorizer
 
@@ -95,7 +93,7 @@ func ListSecrets(kv string) (secrets.SecretList, error) {
 		log.Fatalf("unable to get list of secrets: %v\n", err)
 	}
 
-	var s secrets.SecretList
+	var s structs.SecretList
 
 	for siter.NotDone() {
 		i := siter.Value()
@@ -103,21 +101,60 @@ func ListSecrets(kv string) (secrets.SecretList, error) {
 		key := path.Base(*i.ID)
 		b, err := c.GetSecret(context.Background(), baseurl, key, "")
 		if err != nil {
-			return secrets.SecretList{}, err
+			return structs.SecretList{}, err
 		}
 
-		s.Secrets = append(s.Secrets, secrets.Secret{Id: *b.ID, Name: path.Base(path.Dir(*b.ID)), Version: path.Base(*b.ID)})
+		s.Secrets = append(s.Secrets, structs.Secret{Id: *b.ID, Name: path.Base(path.Dir(*b.ID)), Version: path.Base(*b.ID)})
 		err = siter.NextWithContext(ctx)
 		if err != nil {
-			return secrets.SecretList{}, err
+			return structs.SecretList{}, err
 		}
 	}
 
 	return s, nil
 }
 
+// EncryptString - encrypt a given file
+func EncryptString(kv string, k string, v string, e string) (keyvault.KeyOperationResult, error) {
+
+	// prepare keyvault
+	c := keyvault.New()
+	c.Authorizer = authorizer
+	baseurl := fmt.Sprintf("https://%s.%s", kv, azure.PublicCloud.KeyVaultDNSSuffix)
+	ctx := context.Background()
+	param := keyvault.KeyOperationsParameters{
+		Algorithm: keyvault.RSA15,
+		Value:     &e,
+	}
+	r, err := c.Encrypt(ctx, baseurl, k, v, param)
+	if err != nil {
+		return keyvault.KeyOperationResult{}, err
+	}
+
+	return r, nil
+}
+
+func DecryptString(kv string, k string, v string, e string) (keyvault.KeyOperationResult, error) {
+
+	// prepare keyvault
+	c := keyvault.New()
+	c.Authorizer = authorizer
+	baseurl := fmt.Sprintf("https://%s.%s", kv, azure.PublicCloud.KeyVaultDNSSuffix)
+	ctx := context.Background()
+	param := keyvault.KeyOperationsParameters{
+		Algorithm: keyvault.RSA15,
+		Value:     &e,
+	}
+	r, err := c.Decrypt(ctx, baseurl, k, v, param)
+	if err != nil {
+		return keyvault.KeyOperationResult{}, err
+	}
+
+	return r, nil
+}
+
 // ListKeys - list all keys in the specified keyvault
-func ListKeys(kv string) (keys.KeyList, error) {
+func ListKeys(kv string) (structs.KeyList, error) {
 	c := keyvault.New()
 	c.Authorizer = authorizer
 
@@ -129,7 +166,7 @@ func ListKeys(kv string) (keys.KeyList, error) {
 		log.Fatalf("unable to get list of keys: %v\n", err)
 	}
 
-	var k keys.KeyList
+	var k structs.KeyList
 
 	for siter.NotDone() {
 		i := siter.Value()
@@ -137,13 +174,13 @@ func ListKeys(kv string) (keys.KeyList, error) {
 		key := path.Base(*i.Kid)
 		b, err := c.GetKey(context.Background(), baseurl, key, "")
 		if err != nil {
-			return keys.KeyList{}, err
+			return structs.KeyList{}, err
 		}
 
-		k.Keys = append(k.Keys, keys.Key{Kid: *b.Key.Kid, Name: path.Base(path.Dir(*b.Key.Kid)), Version: path.Base(*b.Key.Kid)})
+		k.Keys = append(k.Keys, structs.Key{Kid: structs.KeyvaultObjectId{*b.Key.Kid}, Name: path.Base(path.Dir(*b.Key.Kid)), Version: path.Base(*b.Key.Kid)})
 		err = siter.NextWithContext(ctx)
 		if err != nil {
-			return keys.KeyList{}, err
+			return structs.KeyList{}, err
 		}
 	}
 

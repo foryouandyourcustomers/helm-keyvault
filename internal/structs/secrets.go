@@ -1,8 +1,6 @@
-package secrets
+package structs
 
-import (
-	"encoding/base64"
-)
+import "encoding/base64"
 
 type Secret struct {
 	Id      string

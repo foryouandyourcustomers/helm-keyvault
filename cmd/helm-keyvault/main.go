@@ -138,6 +138,61 @@ func main() {
 							return cmd.ListKeys(c.String("keyvault"))
 						},
 					},
+					{
+						Name:  "encrypt",
+						Usage: "Encrypt given file with given keyvault key",
+						Flags: []cli.Flag{
+							&fkv,
+							&fke,
+							&fve,
+							&cli.StringFlag{
+								Name:     "file",
+								Aliases:  []string{"f"},
+								Usage:    "BFile to encrypt",
+								Required: true,
+							},
+						},
+						Action: func(c *cli.Context) error {
+							return cmd.EncryptFile(c.String("keyvault"), c.String("key"), c.String("version"), c.String("file"))
+						},
+					},
+					{
+						Name:  "decrypt",
+						Usage: "Decrypt the given file with the stored keyvault key",
+						Flags: []cli.Flag{
+							&cli.StringFlag{
+								Name:     "keyvault",
+								Aliases:  []string{"kv"},
+								Usage:    "Name of the keyvault",
+								Required: false,
+								EnvVars:  []string{"KEYVAULT"},
+							},
+							&cli.StringFlag{
+								Name:     "key",
+								Aliases:  []string{"k"},
+								Usage:    "Name of the key",
+								Required: false,
+								EnvVars:  []string{"KEY"},
+							},
+
+							&cli.StringFlag{
+								Name:     "version",
+								Aliases:  []string{"v"},
+								Usage:    "Key version",
+								Required: false,
+								EnvVars:  []string{"VERSION"},
+							},
+							&cli.StringFlag{
+								Name:     "file",
+								Aliases:  []string{"f"},
+								Usage:    "BFile to encrypt",
+								Required: true,
+							},
+						},
+						Action: func(c *cli.Context) error {
+							return cmd.DecryptFile(c.String("keyvault"), c.String("key"), "", c.String("file"))
+						},
+					},
 				},
 			},
 		},
