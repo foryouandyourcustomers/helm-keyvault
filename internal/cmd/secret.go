@@ -4,7 +4,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
-	"github.com/foryouandyourcustomers/helm-keyvault/internal/keyvault"
+	"github.com/foryouandyourcustomers/helm-keyvault/internal/structs"
 	"io/ioutil"
 )
 
@@ -12,13 +12,16 @@ import (
 func GetSecret(kv string, sn string, ve string) error {
 
 	// retrieve and decode base64 encoded secret
-	su, err := keyvault.GetSecret(kv, sn, ve)
+	sec := structs.Secret{
+		Name:     sn,
+		Version:  ve,
+		KeyVault: kv,
+	}
+	_, err := sec.Get()
 	if err != nil {
 		return err
 	}
-
-	// retrieve and decode secret content
-	value, err := su.Decode()
+	value, err := sec.Decode()
 	if err != nil {
 		return err
 	}
@@ -36,30 +39,33 @@ func PutSecret(kv string, sn string, f string) error {
 	}
 	e := base64.StdEncoding.EncodeToString(c)
 
-	s, err := keyvault.PutSecret(kv, sn, e)
+	// put secret to keyvault
+	sec := structs.Secret{
+		Name:     sn,
+		KeyVault: kv,
+		Value:    e,
+	}
+	_, err = sec.Put()
 	if err != nil {
 		return err
 	}
-
-	res, err := json.Marshal(s)
-	if err != nil {
-		return err
-	}
-
-	fmt.Print(string(res))
+	j, err := json.Marshal(sec)
+	fmt.Print(string(j))
 	return nil
 }
 
 // ListSecrets - List all secrets in the keyvault
 func ListSecrets(kv string) error {
-	s, err := keyvault.ListSecrets(kv)
+
+	// initialize list
+	sl := structs.SecretList{}
+
+	err := sl.List(kv)
 	if err != nil {
 		return err
 	}
-	j, err := json.Marshal(s)
-	if err != nil {
-		return err
-	}
+
+	j, err := json.Marshal(sl)
 	fmt.Print(string(j))
 	return nil
 }

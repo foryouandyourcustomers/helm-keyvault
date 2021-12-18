@@ -4,19 +4,22 @@ import (
 	"context"
 	"encoding/base64"
 	"fmt"
-	"github.com/Azure/go-autorest/autorest"
-	"github.com/Azure/go-autorest/autorest/azure"
-	"github.com/foryouandyourcustomers/helm-keyvault/internal/structs"
-	log "github.com/sirupsen/logrus"
-	"os"
-	"path"
-
 	"github.com/Azure/azure-sdk-for-go/profiles/latest/keyvault/keyvault"
 	kvauth "github.com/Azure/azure-sdk-for-go/services/keyvault/auth"
+	"github.com/Azure/go-autorest/autorest"
+	"github.com/Azure/go-autorest/autorest/azure"
+	log "github.com/sirupsen/logrus"
+	"path"
 )
 
 var (
 	authorizer autorest.Authorizer
+)
+
+const (
+	KeyType keyvault.JSONWebKeyType                = "RSA"
+	KeySize int32                                  = 4096
+	KeyAlgo keyvault.JSONWebKeyEncryptionAlgorithm = keyvault.RSA15
 )
 
 // initialize keyvault authorizer
@@ -40,7 +43,7 @@ func init() {
 }
 
 // GetSecret - return a secret object
-func GetSecret(kv string, sn string, sv string) (structs.Secret, error) {
+func GetSecret(kv string, sn string, sv string) (keyvault.SecretBundle, error) {
 
 	c := keyvault.New()
 	c.Authorizer = authorizer
@@ -49,15 +52,10 @@ func GetSecret(kv string, sn string, sv string) (structs.Secret, error) {
 
 	s, err := c.GetSecret(context.Background(), baseurl, sn, sv)
 	if err != nil {
-		return structs.Secret{}, err
+		return keyvault.SecretBundle{}, err
 	}
 
-	return structs.Secret{
-		Id:      *s.ID,
-		Name:    sn,
-		Version: path.Base(*s.ID),
-		Value:   *s.Value,
-	}, nil
+	return s, nil
 }
 
 // PutSecret - put secret into keyvault
@@ -81,7 +79,7 @@ func PutSecret(kv string, sn string, cn string) (keyvault.SecretBundle, error) {
 }
 
 // ListSecrets - list all secrets in the specified keyvault
-func ListSecrets(kv string) (structs.SecretList, error) {
+func ListSecrets(kv string) ([]keyvault.SecretBundle, error) {
 	c := keyvault.New()
 	c.Authorizer = authorizer
 
@@ -93,7 +91,7 @@ func ListSecrets(kv string) (structs.SecretList, error) {
 		log.Fatalf("unable to get list of secrets: %v\n", err)
 	}
 
-	var s structs.SecretList
+	var s []keyvault.SecretBundle
 
 	for siter.NotDone() {
 		i := siter.Value()
@@ -101,13 +99,13 @@ func ListSecrets(kv string) (structs.SecretList, error) {
 		key := path.Base(*i.ID)
 		b, err := c.GetSecret(context.Background(), baseurl, key, "")
 		if err != nil {
-			return structs.SecretList{}, err
+			return []keyvault.SecretBundle{}, err
 		}
 
-		s.Secrets = append(s.Secrets, structs.Secret{Id: *b.ID, Name: path.Base(path.Dir(*b.ID)), Version: path.Base(*b.ID)})
+		s = append(s, b)
 		err = siter.NextWithContext(ctx)
 		if err != nil {
-			return structs.SecretList{}, err
+			return []keyvault.SecretBundle{}, err
 		}
 	}
 
@@ -123,7 +121,7 @@ func EncryptString(kv string, k string, v string, e string) (keyvault.KeyOperati
 	baseurl := fmt.Sprintf("https://%s.%s", kv, azure.PublicCloud.KeyVaultDNSSuffix)
 	ctx := context.Background()
 	param := keyvault.KeyOperationsParameters{
-		Algorithm: keyvault.RSA15,
+		Algorithm: KeyAlgo,
 		Value:     &e,
 	}
 	r, err := c.Encrypt(ctx, baseurl, k, v, param)
@@ -142,7 +140,7 @@ func DecryptString(kv string, k string, v string, e string) (keyvault.KeyOperati
 	baseurl := fmt.Sprintf("https://%s.%s", kv, azure.PublicCloud.KeyVaultDNSSuffix)
 	ctx := context.Background()
 	param := keyvault.KeyOperationsParameters{
-		Algorithm: keyvault.RSA15,
+		Algorithm: KeyAlgo,
 		Value:     &e,
 	}
 	r, err := c.Decrypt(ctx, baseurl, k, v, param)
@@ -154,7 +152,7 @@ func DecryptString(kv string, k string, v string, e string) (keyvault.KeyOperati
 }
 
 // ListKeys - list all keys in the specified keyvault
-func ListKeys(kv string) (structs.KeyList, error) {
+func ListKeys(kv string) ([]keyvault.KeyBundle, error) {
 	c := keyvault.New()
 	c.Authorizer = authorizer
 
@@ -166,7 +164,7 @@ func ListKeys(kv string) (structs.KeyList, error) {
 		log.Fatalf("unable to get list of keys: %v\n", err)
 	}
 
-	var k structs.KeyList
+	var k []keyvault.KeyBundle
 
 	for siter.NotDone() {
 		i := siter.Value()
@@ -174,40 +172,67 @@ func ListKeys(kv string) (structs.KeyList, error) {
 		key := path.Base(*i.Kid)
 		b, err := c.GetKey(context.Background(), baseurl, key, "")
 		if err != nil {
-			return structs.KeyList{}, err
+			return []keyvault.KeyBundle{}, err
 		}
 
-		k.Keys = append(k.Keys, structs.Key{Kid: structs.KeyvaultObjectId{*b.Key.Kid}, Name: path.Base(path.Dir(*b.Key.Kid)), Version: path.Base(*b.Key.Kid)})
+		k = append(k, b)
 		err = siter.NextWithContext(ctx)
 		if err != nil {
-			return structs.KeyList{}, err
+			return []keyvault.KeyBundle{}, err
 		}
 	}
 
 	return k, nil
 }
 
-// BackupKey - Create a protected backup file for the import into azure keyvault
-func BackupKey(kv string, key string, f string) error {
+// BackupKey - Create a backup of a key which can be used for restoring
+func BackupKey(kv string, key string) (string, error) {
 	c := keyvault.New()
 	c.Authorizer = authorizer
 
 	baseurl := fmt.Sprintf("https://%s.%s", kv, azure.PublicCloud.KeyVaultDNSSuffix)
 	kb, err := c.BackupKey(context.Background(), baseurl, key)
 	if err != nil {
-		return err
+		return "", err
 	}
-
-	fp, err := os.Create(f)
-	if err != nil {
-		return err
-	}
-	defer fp.Close()
 
 	dec, err := base64.RawURLEncoding.DecodeString(*kb.Value)
-	_, err = fp.WriteString(string(dec))
 	if err != nil {
-		return err
+		return "", err
 	}
-	return nil
+	return string(dec), nil
+}
+
+// CreateKey - create a keyvault key
+func CreateKey(kv string, key string) (keyvault.KeyBundle, error) {
+	c := keyvault.New()
+	c.Authorizer = authorizer
+
+	ks := KeySize
+	baseurl := fmt.Sprintf("https://%s.%s", kv, azure.PublicCloud.KeyVaultDNSSuffix)
+	params := keyvault.KeyCreateParameters{
+		Kty:     KeyType,
+		KeySize: &ks,
+	}
+	kb, err := c.CreateKey(context.Background(), baseurl, key, params)
+	if err != nil {
+		return keyvault.KeyBundle{}, err
+	}
+	return kb, nil
+}
+
+// GetKey - return a secret object
+func GetKey(kv string, kn string, kve string) (keyvault.KeyBundle, error) {
+
+	c := keyvault.New()
+	c.Authorizer = authorizer
+
+	baseurl := fmt.Sprintf("https://%s.%s", kv, azure.PublicCloud.KeyVaultDNSSuffix)
+
+	s, err := c.GetKey(context.Background(), baseurl, kn, kve)
+	if err != nil {
+		return keyvault.KeyBundle{}, err
+	}
+
+	return s, nil
 }

@@ -1,28 +1,16 @@
 package structs
 
 import (
-	"errors"
-	"fmt"
 	"net/url"
 	"strings"
 )
 
-func splitPath(p string) ([]string, error) {
-	paths := strings.Split(p, "/")
-	if len(paths) != 4 {
-		return []string{}, errors.New(fmt.Sprintf("Invalid keyvault path '%s'", p))
-	}
-	return paths, nil
-}
-
-type KeyvaultObjectId struct {
-	//https://<keyvault-name>.vault.azure.net/<type>/<objectname>/<objectversion>"
-	Id string
-}
+//https://<keyvault-name>.vault.azure.net/<type>/<objectname>/<objectversion>"
+type KeyvaultObjectId string
 
 // GetKeyvault - Get the keyvault name from the ObjectId
 func (k *KeyvaultObjectId) GetKeyvault() (string, error) {
-	kv, err := url.Parse(k.Id)
+	kv, err := url.Parse(string(*k))
 	if err != nil {
 		return "", err
 	}
@@ -32,7 +20,7 @@ func (k *KeyvaultObjectId) GetKeyvault() (string, error) {
 }
 
 func (k *KeyvaultObjectId) GetType() (string, error) {
-	kv, err := url.Parse(k.Id)
+	kv, err := url.Parse(string(*k))
 	if err != nil {
 		return "", err
 	}
@@ -46,7 +34,7 @@ func (k *KeyvaultObjectId) GetType() (string, error) {
 }
 
 func (k *KeyvaultObjectId) GetName() (string, error) {
-	kv, err := url.Parse(k.Id)
+	kv, err := url.Parse(string(*k))
 	if err != nil {
 		return "", err
 	}
@@ -60,7 +48,7 @@ func (k *KeyvaultObjectId) GetName() (string, error) {
 }
 
 func (k *KeyvaultObjectId) GetVersion() (string, error) {
-	kv, err := url.Parse(k.Id)
+	kv, err := url.Parse(string(*k))
 	if err != nil {
 		return "", err
 	}

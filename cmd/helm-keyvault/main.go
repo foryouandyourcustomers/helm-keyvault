@@ -44,7 +44,7 @@ func main() {
 		Commands: []*cli.Command{
 			{
 				Name:  "download",
-				Usage: "Download and decode secret from keyvault and print contents to stdout - use with helm downloader plugin",
+				Usage: "Decode keyvault secret or encrypted file, print result to stdout for usage with the helm downloader plugin",
 				Action: func(c *cli.Context) error {
 					if c.Args().Len() != 4 {
 						return errors.New("Please specify four arguments - command certFile keyFile caFile full-URL")
@@ -107,6 +107,17 @@ func main() {
 				Aliases: []string{"k", "key"},
 				Usage:   "create, export and list keys",
 				Subcommands: []*cli.Command{
+					{
+						Name:  "create",
+						Usage: "Create an azure keyvault key which can be used for local file encryption",
+						Flags: []cli.Flag{
+							&fkv,
+							&fke,
+						},
+						Action: func(c *cli.Context) error {
+							return cmd.CreateKey(c.String("keyvault"), c.String("key"))
+						},
+					},
 					{
 						Name:  "backup",
 						Usage: "Backup azure keyvault key. The created backup can be imported into a keyvault and reused",
