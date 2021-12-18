@@ -149,6 +149,13 @@ func main() {
 							return cmd.ListKeys(c.String("keyvault"))
 						},
 					},
+				},
+			},
+			{
+				Name:    "files",
+				Aliases: []string{"f", "file"},
+				Usage:   "Encrypt and decrypt local files",
+				Subcommands: []*cli.Command{
 					{
 						Name:  "encrypt",
 						Usage: "Encrypt given file with given keyvault key",
@@ -174,14 +181,14 @@ func main() {
 							&cli.StringFlag{
 								Name:     "keyvault",
 								Aliases:  []string{"kv"},
-								Usage:    "Name of the keyvault",
+								Usage:    "Use alternate keyvault for decryption",
 								Required: false,
 								EnvVars:  []string{"KEYVAULT"},
 							},
 							&cli.StringFlag{
 								Name:     "key",
 								Aliases:  []string{"k"},
-								Usage:    "Name of the key",
+								Usage:    "Use alternate key for decryption",
 								Required: false,
 								EnvVars:  []string{"KEY"},
 							},
@@ -189,7 +196,7 @@ func main() {
 							&cli.StringFlag{
 								Name:     "version",
 								Aliases:  []string{"v"},
-								Usage:    "Key version",
+								Usage:    "Use alternate version for decryption",
 								Required: false,
 								EnvVars:  []string{"VERSION"},
 							},
