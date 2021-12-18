@@ -58,5 +58,9 @@ func (k *KeyvaultObjectId) GetVersion() (string, error) {
 		return "", err
 	}
 
+	if len(p) < 4 {
+		return "", nil
+	}
+
 	return p[3], nil
 }
