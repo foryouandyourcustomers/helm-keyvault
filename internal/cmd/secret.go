@@ -12,8 +12,14 @@ import (
 func GetSecret(kv string, sn string, ve string) error {
 
 	// retrieve and decode base64 encoded secret
-	sec := structs.NewSecret(kv, sn, ve)
-	sec, err := sec.Get()
+	keyvault, err := structs.NewKeyvault(kv)
+	if err != nil {
+		return err
+	}
+
+	sec := structs.NewSecret(&keyvault, sn, ve)
+
+	sec, err = sec.Get()
 	if err != nil {
 		return err
 	}
@@ -37,7 +43,13 @@ func PutSecret(kv string, sn string, f string) error {
 	e := base64.StdEncoding.EncodeToString(c)
 
 	// put secret to keyvault
-	sec := structs.NewSecret(kv, sn, "")
+	// retrieve and decode base64 encoded secret
+	keyvault, err := structs.NewKeyvault(kv)
+	if err != nil {
+		return err
+	}
+
+	sec := structs.NewSecret(&keyvault, sn, "")
 	sec.Value = e
 
 	sec, err = sec.Put()
@@ -52,11 +64,16 @@ func PutSecret(kv string, sn string, f string) error {
 // ListSecrets - List all secrets in the keyvault
 func ListSecrets(kv string) error {
 
-	// initialize list
+	// initialize keyvault object
+	keyvault, err := structs.NewKeyvault(kv)
+	if err != nil {
+		return err
+	}
+
+	// inialize secret list
 	sl := structs.SecretList{}
 
-	var err error
-	sl.Secrets, err = sl.List(kv)
+	sl.Secrets, err = sl.List(&keyvault)
 	if err != nil {
 		return err
 	}

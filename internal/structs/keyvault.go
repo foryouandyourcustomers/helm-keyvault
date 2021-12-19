@@ -2,7 +2,9 @@ package structs
 
 import (
 	"fmt"
+	mskeyvault "github.com/Azure/azure-sdk-for-go/profiles/latest/keyvault/keyvault"
 	"github.com/Azure/go-autorest/autorest/azure"
+	"github.com/foryouandyourcustomers/helm-keyvault/internal/keyvault"
 	"net/url"
 	"strings"
 )
@@ -41,4 +43,20 @@ func (k *KeyvaultObjectId) GetVersion() string {
 		return ""
 	}
 	return p[3]
+}
+
+// NewKeyvault - returns a new keyvault struct with valid authorizer and client
+func NewKeyvault(name string) (keyvault.Keyvault, error) {
+	kv := keyvault.Keyvault{}
+	var err error
+	kv.Authorizer, err = kv.NewAuthorizer()
+	if err != nil {
+		return keyvault.Keyvault{}, err
+	}
+
+	kv.Client = mskeyvault.New()
+	kv.Client.Authorizer = kv.Authorizer
+	kv.BaseUrl = fmt.Sprintf("https://%s.%s", name, azure.PublicCloud.KeyVaultDNSSuffix)
+	kv.Name = name
+	return kv, nil
 }

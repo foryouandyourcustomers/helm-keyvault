@@ -26,11 +26,16 @@ func (u *keyvaultUri) download() (string, error) {
 
 	// create secrets struct
 	secret := structs.Secret{Id: structs.KeyvaultObjectId(uri)}
-	secret.KeyVault = secret.Id.GetKeyvault()
+	kv, err := structs.NewKeyvault(secret.Id.GetKeyvault())
+	if err != nil {
+		return "", err
+	}
+
+	secret.KeyVault = &kv
 	secret.Name = secret.Id.GetName()
 	secret.Version = secret.Id.GetVersion()
 
-	secret, err := secret.Get()
+	secret, err = secret.Get()
 	if err != nil {
 		return "", err
 	}
