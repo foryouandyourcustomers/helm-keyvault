@@ -143,7 +143,6 @@ func (e *EncryptedFile) WriteFile(f string) error {
 		if err != nil {
 			return err
 		}
-
 	}
 
 	return nil

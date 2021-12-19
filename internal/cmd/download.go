@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"encoding/base64"
 	"errors"
 	"fmt"
 	"github.com/foryouandyourcustomers/helm-keyvault/internal/structs"
@@ -34,11 +35,6 @@ func (u *keyvaultUri) download() (string, error) {
 	secret.Name = n
 	secret.Version = v
 
-	println(secret.Id)
-	println(kv)
-	println(n)
-	println(v)
-
 	_, err := secret.Get()
 	if err != nil {
 		return "", err
@@ -58,7 +54,41 @@ type fileUri struct {
 }
 
 func (u *fileUri) download() (string, error) {
-	return "abc", nil
+	// parse uri to get file path
+	parsed, err := url.Parse(u.uri)
+	if err != nil {
+		return "", err
+	}
+
+	encfile := structs.EncryptedFile{}
+	err = encfile.LoadEncryptedFile(fmt.Sprintf("%s%s", parsed.Host, parsed.Path))
+	if err != nil {
+		return "", err
+	}
+
+	// retrieve keyvault information from loaded file
+	kv, err := encfile.Kid.GetKeyvault()
+	key, err := encfile.Kid.GetName()
+	version, err := encfile.Kid.GetVersion()
+
+	// decrypt the given data
+	err = encfile.DecryptData(kv, key, version)
+	if err != nil {
+		return "", err
+	}
+
+	// parse the encoded chunks and return them as
+	// a single string
+	var value string
+	for _, chunk := range encfile.EncodedData {
+		c, err := base64.RawURLEncoding.DecodeString(chunk)
+		if err != nil {
+			return "", err
+		}
+		value = fmt.Sprintf("%s%s", value, string(c))
+	}
+
+	return value, nil
 }
 
 // DownloadSecret - Download and decode secret to be used as downloader plugin
