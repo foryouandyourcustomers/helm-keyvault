@@ -64,12 +64,12 @@ func (e *EncryptedFile) EncryptData() ([]string, error) {
 	// get keyvault and key info
 	kv := e.Kid.GetKeyvault()
 	key := e.Kid.GetName()
-	kver := e.Kid.GetVersion()
+	version := e.Kid.GetVersion()
 
 	// loop trough the chunked encoded data strings
 	var value []string
 	for _, d := range e.EncodedData {
-		enc, err := keyvault.EncryptString(kv, key, kver, d)
+		enc, err := keyvault.EncryptString(kv, key, version, d)
 		if err != nil {
 			return nil, err
 		}

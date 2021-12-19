@@ -33,6 +33,22 @@ func (k *Key) Backup(f string) error {
 	return nil
 }
 
+// Get - Retrieve key information from keyvault
+func (k *Key) Get() (Key, error) {
+	kb, err := keyvault.GetKey(k.KeyVault, k.Name, k.Version)
+	if err != nil {
+		return Key{}, err
+	}
+
+	koid := KeyvaultObjectId(*kb.Key.Kid)
+	return Key{
+		Kid:      koid,
+		Name:     koid.GetName(),
+		KeyVault: koid.GetKeyvault(),
+		Version:  koid.GetVersion(),
+	}, nil
+}
+
 func (k *Key) Create() (Key, error) {
 	// first check if the key already exists
 	kb, err := keyvault.GetKey(k.KeyVault, k.Name, k.Version)

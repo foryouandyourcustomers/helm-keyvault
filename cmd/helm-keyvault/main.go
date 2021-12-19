@@ -204,7 +204,7 @@ func main() {
 							&cli.StringFlag{
 								Name:     "file",
 								Aliases:  []string{"f"},
-								Usage:    "BFile to encrypt",
+								Usage:    "File to encrypt",
 								Required: true,
 							},
 						},
