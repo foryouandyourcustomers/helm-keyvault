@@ -26,11 +26,7 @@ func ListKeys(kv string) error {
 // BackupKey - Backup an azure keyvault key
 func BackupKey(kv string, k string, f string) error {
 
-	key := structs.Key{
-		KeyVault: kv,
-		Name:     k,
-	}
-
+	key := structs.NewKey(kv, k, "")
 	err := key.Backup(f)
 	return err
 }
@@ -38,10 +34,7 @@ func BackupKey(kv string, k string, f string) error {
 // CreateKey - Create an azure keyvault key
 func CreateKey(kv string, k string) error {
 
-	key := structs.Key{
-		KeyVault: kv,
-		Name:     k,
-	}
+	key := structs.NewKey(kv, k, "")
 
 	key, err := key.Create()
 	if err != nil {

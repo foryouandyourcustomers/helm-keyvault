@@ -13,6 +13,16 @@ type Secret struct {
 	Value    string           `json:"value,omitempty"`
 }
 
+// NewSecret - return a Secret Struct
+func NewSecret(kv string, secret string, version string) Secret {
+	return Secret{
+		Id:       NewKeyvaultObjectId(kv, "secrets", secret, version),
+		Name:     secret,
+		KeyVault: kv,
+		Version:  version,
+	}
+}
+
 // Get - retrieve secret from keyvault
 func (s *Secret) Get() (Secret, error) {
 	sb, err := keyvault.GetSecret(s.KeyVault, s.Name, s.Version)

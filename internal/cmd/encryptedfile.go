@@ -16,11 +16,7 @@ func EncryptFile(kv string, k string, v string, f string) error {
 	// the keyvault. this is required to ensure the file
 	// can be decrypted even after a new key version is created
 	if v == "" {
-		k := structs.Key{
-			Kid:      structs.CreateKeyVaultId(kv, "keys", k, v),
-			KeyVault: kv,
-			Name:     k,
-		}
+		k := structs.NewKey(kv, k, "")
 		k, err := k.Get()
 		if err != nil {
 			return err
@@ -29,7 +25,7 @@ func EncryptFile(kv string, k string, v string, f string) error {
 	}
 
 	// add values to encoded file struct
-	ef.Kid = structs.CreateKeyVaultId(kv, "keys", k, v)
+	ef.Kid = structs.NewKeyvaultObjectId(kv, "keys", k, v)
 
 	// load file
 	var err error

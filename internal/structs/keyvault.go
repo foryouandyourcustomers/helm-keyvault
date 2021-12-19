@@ -1,12 +1,19 @@
 package structs
 
 import (
+	"fmt"
+	"github.com/Azure/go-autorest/autorest/azure"
 	"net/url"
 	"strings"
 )
 
 //https://<keyvault-name>.vault.azure.net/<type>/<objectname>/<objectversion>"
 type KeyvaultObjectId string
+
+// NewKeyVaultObjectId - Return a Keyvault Id
+func NewKeyvaultObjectId(kv string, ty string, name string, ver string) KeyvaultObjectId {
+	return KeyvaultObjectId(fmt.Sprintf("https://%s.%s/%s/%s/%s", kv, azure.PublicCloud.KeyVaultDNSSuffix, ty, name, ver))
+}
 
 // GetKeyvault - Get the keyvault name from the ObjectId
 func (k *KeyvaultObjectId) GetKeyvault() string {

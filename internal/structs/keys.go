@@ -13,6 +13,16 @@ type Key struct {
 	Version  string           `json:"version,omitempty"`
 }
 
+// NewKey - create a new Key struct
+func NewKey(kv string, key string, version string) Key {
+	return Key{
+		Kid:      NewKeyvaultObjectId(kv, "keys", key, version),
+		Name:     key,
+		KeyVault: kv,
+		Version:  version,
+	}
+}
+
 // Backup - create backup of key and write it into the given file
 func (k *Key) Backup(f string) error {
 	backup, err := keyvault.BackupKey(k.KeyVault, k.Name)
