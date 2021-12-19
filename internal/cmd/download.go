@@ -1,7 +1,6 @@
 package cmd
 
 import (
-	"encoding/base64"
 	"errors"
 	"fmt"
 	"github.com/foryouandyourcustomers/helm-keyvault/internal/structs"
@@ -60,8 +59,8 @@ func (u *fileUri) download() (string, error) {
 		return "", err
 	}
 
-	encfile := structs.EncryptedFile{}
-	err = encfile.LoadEncryptedFile(fmt.Sprintf("%s%s", parsed.Host, parsed.Path))
+	var encfile structs.EncryptedFile
+	encfile, err = encfile.LoadEncryptedFile(fmt.Sprintf("%s%s", parsed.Host, parsed.Path))
 	if err != nil {
 		return "", err
 	}
@@ -72,20 +71,14 @@ func (u *fileUri) download() (string, error) {
 	version, err := encfile.Kid.GetVersion()
 
 	// decrypt the given data
-	err = encfile.DecryptData(kv, key, version)
+	encfile.EncodedData, err = encfile.DecryptData(kv, key, version)
 	if err != nil {
 		return "", err
 	}
 
-	// parse the encoded chunks and return them as
-	// a single string
-	var value string
-	for _, chunk := range encfile.EncodedData {
-		c, err := base64.RawURLEncoding.DecodeString(chunk)
-		if err != nil {
-			return "", err
-		}
-		value = fmt.Sprintf("%s%s", value, string(c))
+	value, err := encfile.GetDecodedString()
+	if err != nil {
+		return "", err
 	}
 
 	return value, nil

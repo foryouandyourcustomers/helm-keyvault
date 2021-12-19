@@ -16,13 +16,14 @@ func EncryptFile(kv string, k string, v string, f string) error {
 	ef.Kid = structs.CreateKeyVaultId(kv, "keys", k, v)
 
 	// load file
-	err := ef.LoadFile(f)
+	var err error
+	ef.EncodedData, err = ef.LoadFile(f)
 	if err != nil {
 		return err
 	}
 
 	// encrypt the given dats
-	err = ef.EncryptData()
+	ef.EncryptedData, err = ef.EncryptData()
 	if err != nil {
 		return err
 	}
@@ -38,13 +39,13 @@ func EncryptFile(kv string, k string, v string, f string) error {
 func DecryptFile(kv string, k string, v string, f string) error {
 
 	ef := structs.EncryptedFile{}
-	err := ef.LoadEncryptedFile(f)
+	ef, err := ef.LoadEncryptedFile(f)
 	if err != nil {
 		return err
 	}
 
 	// decrypt data, overwrite given kid with optional key
-	err = ef.DecryptData(kv, k, v)
+	ef.EncodedData, err = ef.DecryptData(kv, k, v)
 	if err != nil {
 		return err
 	}
@@ -53,4 +54,5 @@ func DecryptFile(kv string, k string, v string, f string) error {
 	fn := strings.Replace(f, ".enc", "", 1)
 	err = ef.WriteFile(fn)
 	return err
+
 }
