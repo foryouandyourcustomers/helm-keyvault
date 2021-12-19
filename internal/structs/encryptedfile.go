@@ -62,9 +62,9 @@ func (e *EncryptedFile) LoadEncryptedFile(f string) (EncryptedFile, error) {
 func (e *EncryptedFile) EncryptData() ([]string, error) {
 
 	// get keyvault and key info
-	kv, _ := e.Kid.GetKeyvault()
-	key, _ := e.Kid.GetName()
-	kver, _ := e.Kid.GetVersion()
+	kv := e.Kid.GetKeyvault()
+	key := e.Kid.GetName()
+	kver := e.Kid.GetVersion()
 
 	// loop trough the chunked encoded data strings
 	var value []string
@@ -86,21 +86,21 @@ func (e *EncryptedFile) DecryptData(kv string, k string, v string) ([]string, er
 	kvname := kv
 	var err error
 	if kvname == "" {
-		kvname, err = e.Kid.GetKeyvault()
+		kvname = e.Kid.GetKeyvault()
 		if err != nil {
 			return nil, err
 		}
 	}
 	key := k
 	if key == "" {
-		key, err = e.Kid.GetName()
+		key = e.Kid.GetName()
 		if err != nil {
 			return nil, err
 		}
 	}
 	version := v
 	if version == "" {
-		version, err = e.Kid.GetVersion()
+		version = e.Kid.GetVersion()
 		if err != nil {
 			return nil, err
 		}

@@ -92,6 +92,7 @@ func main() {
 							&fse,
 							&cli.StringFlag{
 								Name:     "file",
+								Aliases:  []string{"f"},
 								Usage:    "path to file to encode and upload to keyvault",
 								Required: true,
 							},

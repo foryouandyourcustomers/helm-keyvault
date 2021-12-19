@@ -33,50 +33,47 @@ func (k *Key) Backup(f string) error {
 	return nil
 }
 
-func (k *Key) Create() error {
+func (k *Key) Create() (Key, error) {
 	// first check if the key already exists
 	kb, err := keyvault.GetKey(k.KeyVault, k.Name, k.Version)
 	// abort here if the key can be retrieved
-
 	if err == nil {
-		return errors.New("Key already exists.")
+		return Key{}, errors.New("Key already exists.")
 	}
 
 	kb, err = keyvault.CreateKey(k.KeyVault, k.Name)
 	if err != nil {
-		return err
+		return Key{}, err
 	}
 
 	koid := KeyvaultObjectId(*kb.Key.Kid)
-	kn, _ := koid.GetName()
-	kkv, _ := koid.GetKeyvault()
-	kve, _ := koid.GetKeyvault()
+	return Key{
+		Kid:      koid,
+		Name:     koid.GetName(),
+		KeyVault: koid.GetKeyvault(),
+		Version:  koid.GetVersion(),
+	}, nil
 
-	k.Kid = koid
-	k.Name = kn
-	k.Version = kve
-	k.KeyVault = kkv
-
-	return nil
 }
 
 type KeyList struct {
 	Keys []Key `json:"keys,omitempty"`
 }
 
-func (sl *KeyList) List(kv string) error {
+func (sl *KeyList) List(kv string) ([]Key, error) {
 	sk, err := keyvault.ListKeys(kv)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
+	var keys []Key
 	for _, k := range sk {
 		koid := KeyvaultObjectId(*k.Key.Kid)
-		sn, _ := koid.GetName()
-		skv, _ := koid.GetKeyvault()
-		sve, _ := koid.GetVersion()
+		sn := koid.GetName()
+		skv := koid.GetKeyvault()
+		sve := koid.GetVersion()
 
-		sl.Keys = append(sl.Keys,
+		keys = append(keys,
 			Key{
 				Kid:      koid,
 				Name:     sn,
@@ -85,5 +82,5 @@ func (sl *KeyList) List(kv string) error {
 			})
 	}
 
-	return nil
+	return keys, nil
 }

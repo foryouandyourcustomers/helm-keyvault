@@ -12,7 +12,8 @@ func ListKeys(kv string) error {
 	// initialize list
 	sl := structs.KeyList{}
 
-	err := sl.List(kv)
+	var err error
+	sl.Keys, err = sl.List(kv)
 	if err != nil {
 		return err
 	}
@@ -42,12 +43,10 @@ func CreateKey(kv string, k string) error {
 		Name:     k,
 	}
 
-	err := key.Create()
+	key, err := key.Create()
 	if err != nil {
 		return err
 	}
-
-	println("eoirgnioure")
 
 	j, err := json.Marshal(key)
 	if err != nil {

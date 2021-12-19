@@ -14,26 +14,39 @@ type Secret struct {
 }
 
 // Get - retrieve secret from keyvault
-func (s *Secret) Get() (string, error) {
+func (s *Secret) Get() (Secret, error) {
 	sb, err := keyvault.GetSecret(s.KeyVault, s.Name, s.Version)
 	if err != nil {
-		return "", err
+		return Secret{}, err
 	}
 
-	s.Value = *sb.Value
-	s.Id = KeyvaultObjectId(*sb.ID)
+	sid := KeyvaultObjectId(*sb.ID)
 
-	return s.Value, nil
+	return Secret{
+		Id:       sid,
+		Name:     sid.GetName(),
+		KeyVault: sid.GetKeyvault(),
+		Version:  sid.GetVersion(),
+		Value:    *sb.Value,
+	}, nil
 }
 
 // Put - put secret into keyvault
-func (s *Secret) Put() (string, error) {
+func (s *Secret) Put() (Secret, error) {
 	sb, err := keyvault.PutSecret(s.KeyVault, s.Name, s.Value)
 	if err != nil {
-		return "", err
+		return Secret{}, err
 	}
-	s.Id = KeyvaultObjectId(*sb.ID)
-	return string(s.Id), nil
+
+	sid := KeyvaultObjectId(*sb.ID)
+
+	return Secret{
+		Id:       sid,
+		Name:     sid.GetName(),
+		KeyVault: sid.GetKeyvault(),
+		Version:  sid.GetVersion(),
+		Value:    *sb.Value,
+	}, nil
 }
 
 // Decode - decode the given value from base64 to string
@@ -51,28 +64,25 @@ type SecretList struct {
 	Secrets []Secret `json:"secrets,omitempty"`
 }
 
-func (sl *SecretList) List(kv string) error {
+func (sl *SecretList) List(kv string) ([]Secret, error) {
 	sb, err := keyvault.ListSecrets(kv)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
+	var secrets []Secret
 	for _, s := range sb {
 		soid := KeyvaultObjectId(*s.ID)
-		sn, _ := soid.GetName()
-		skv, _ := soid.GetKeyvault()
-		sve, _ := soid.GetVersion()
-
-		sl.Secrets = append(sl.Secrets,
+		secrets = append(secrets,
 			Secret{
 				Id:       soid,
-				Name:     sn,
-				KeyVault: skv,
-				Version:  sve,
+				Name:     soid.GetName(),
+				KeyVault: soid.GetKeyvault(),
+				Version:  soid.GetVersion(),
 				// lets not add the secrets value to the list
 				//Value:    *s.Value,
 			})
 	}
 
-	return nil
+	return secrets, nil
 }

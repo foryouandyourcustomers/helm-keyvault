@@ -17,15 +17,17 @@ func GetSecret(kv string, sn string, ve string) error {
 		Version:  ve,
 		KeyVault: kv,
 	}
-	_, err := sec.Get()
+
+	sec, err := sec.Get()
 	if err != nil {
 		return err
 	}
-	value, err := sec.Decode()
+
+	j, err := json.Marshal(sec)
 	if err != nil {
 		return err
 	}
-	fmt.Print(value)
+	fmt.Print(string(j))
 	return nil
 }
 
@@ -45,7 +47,8 @@ func PutSecret(kv string, sn string, f string) error {
 		KeyVault: kv,
 		Value:    e,
 	}
-	_, err = sec.Put()
+
+	sec, err = sec.Put()
 	if err != nil {
 		return err
 	}
@@ -60,7 +63,8 @@ func ListSecrets(kv string) error {
 	// initialize list
 	sl := structs.SecretList{}
 
-	err := sl.List(kv)
+	var err error
+	sl.Secrets, err = sl.List(kv)
 	if err != nil {
 		return err
 	}
