@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/stretchr/testify/assert"
+	"io/ioutil"
+	"os"
 	"testing"
 )
 
@@ -49,6 +51,22 @@ func TestSecret_Put(t *testing.T) {
 	assert.Equal(s.Name, "mysecret", "should be equal")
 	assert.Equal(s.Value, "My little secret!", "should be equal")
 	assert.Equal(s.Version, "myversion", "should be equal")
+}
+
+func TestKSecret_Backup(t *testing.T) {
+	assert := assert.New(t)
+
+	mock := MockKeyvault{Name: "mykeyvault"}
+	secret := NewSecret(mock, "mysecret", "myversion")
+	tmpfile, _ := ioutil.TempFile("", "TestKSecret_Backup")
+	defer os.Remove(tmpfile.Name())
+	_ = tmpfile.Close()
+
+	// write backup data (mock keyvault returns name of key as backup content)
+	err := secret.Backup(tmpfile.Name())
+	backup, _ := os.ReadFile(tmpfile.Name())
+	assert.Nil(err, "should be nil")
+	assert.Equal("mysecret", string(backup), "should be equal")
 }
 
 func TestSecret_Decode(t *testing.T) {

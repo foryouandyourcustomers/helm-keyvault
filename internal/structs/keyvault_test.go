@@ -44,7 +44,11 @@ func (m MockKeyvault) ListKeys() ([]keyvault.KeyBundle, error) {
 }
 
 func (m MockKeyvault) BackupKey(key string) (string, error) {
-	return string(key), nil
+	return key, nil
+}
+
+func (m MockKeyvault) BackupSecret(secret string) (string, error) {
+	return secret, nil
 }
 
 func (m MockKeyvault) CreateKey(key string) (keyvault.KeyBundle, error) {

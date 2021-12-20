@@ -3,6 +3,7 @@ package structs
 import (
 	"encoding/base64"
 	"github.com/foryouandyourcustomers/helm-keyvault/internal/keyvault"
+	"os"
 )
 
 //type SecretInterface interface {
@@ -67,6 +68,26 @@ func (s *Secret) Put() (Secret, error) {
 		Version:  sid.GetVersion(),
 		Value:    *sb.Value,
 	}, nil
+}
+
+// Backup - create backup of secret and write it into the given file
+func (s *Secret) Backup(f string) error {
+	backup, err := s.KeyVault.BackupSecret(s.Name)
+	if err != nil {
+		return err
+	}
+
+	fp, err := os.Create(f)
+	if err != nil {
+		return err
+	}
+	defer fp.Close()
+
+	_, err = fp.WriteString(backup)
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 // Decode - decode the given value from base64 to string

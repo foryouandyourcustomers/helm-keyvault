@@ -82,3 +82,16 @@ func ListSecrets(kv string) error {
 	fmt.Print(string(j))
 	return nil
 }
+
+// BackupSecret - Create a backup of the specified secret
+func BackupSecret(kv string, secret string, file string) error {
+
+	keyvault, err := structs.NewKeyvault(kv)
+	if err != nil {
+		return err
+	}
+
+	sec := structs.NewSecret(&keyvault, secret, "")
+	err = sec.Backup(file)
+	return err
+}

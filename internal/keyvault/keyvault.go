@@ -26,6 +26,7 @@ type KeyvaultInterface interface {
 	GetSecret(sn string, sv string) (keyvault.SecretBundle, error)
 	PutSecret(name string, value string) (keyvault.SecretBundle, error)
 	ListSecrets() ([]keyvault.SecretBundle, error)
+	BackupSecret(sn string) (string, error)
 	// keys operations
 	EncryptString(key string, version string, encoded string) (keyvault.KeyOperationResult, error)
 	DecryptString(key string, version string, encrypted string) (keyvault.KeyOperationResult, error)
@@ -95,6 +96,20 @@ func (k *Keyvault) PutSecret(name string, value string) (keyvault.SecretBundle, 
 		return keyvault.SecretBundle{}, err
 	}
 	return s, nil
+}
+
+// BackupSecret - create a backup file of the given secret
+func (k *Keyvault) BackupSecret(secret string) (string, error) {
+	kb, err := k.Client.BackupSecret(context.Background(), k.BaseUrl, secret)
+	if err != nil {
+		return "", err
+	}
+
+	dec, err := base64.RawURLEncoding.DecodeString(*kb.Value)
+	if err != nil {
+		return "", err
+	}
+	return string(dec), nil
 }
 
 // ListSecrets - list all secrets in the specified keyvault
