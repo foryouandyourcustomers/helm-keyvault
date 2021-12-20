@@ -3,101 +3,15 @@ package structs
 import (
 	"encoding/base64"
 	"fmt"
-	"github.com/Azure/azure-sdk-for-go/profiles/latest/keyvault/keyvault"
-	"github.com/Azure/go-autorest/autorest"
 	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/stretchr/testify/assert"
 	"testing"
 )
 
-// mocking keyvault until i figure out how to mock the real deal.
-type MockSecretsKeyvault struct {
-	Name string
-}
-
-func (m MockSecretsKeyvault) EncryptString(key string, version string, encoded string) (keyvault.KeyOperationResult, error) {
-	return keyvault.KeyOperationResult{}, nil
-}
-
-func (m MockSecretsKeyvault) DecryptString(key string, version string, encrypted string) (keyvault.KeyOperationResult, error) {
-	return keyvault.KeyOperationResult{}, nil
-}
-
-func (m MockSecretsKeyvault) ListKeys() ([]keyvault.KeyBundle, error) {
-	return nil, nil
-}
-
-func (m MockSecretsKeyvault) BackupKey(key string) (string, error) {
-	return "", nil
-}
-
-func (m MockSecretsKeyvault) CreateKey(key string) (keyvault.KeyBundle, error) {
-	return keyvault.KeyBundle{}, nil
-}
-
-func (m MockSecretsKeyvault) GetKey(key string, version string) (keyvault.KeyBundle, error) {
-	return keyvault.KeyBundle{}, nil
-}
-
-func (m MockSecretsKeyvault) NewAuthorizer() (autorest.Authorizer, error) {
-	return nil, nil
-}
-
-func (m MockSecretsKeyvault) GetKeyvaultName() string {
-	return m.Name
-}
-
-func (m MockSecretsKeyvault) GetSecret(name string, version string) (keyvault.SecretBundle, error) {
-
-	id := fmt.Sprintf("https://%s.%s/secrets/%s/%s", m.Name, azure.PublicCloud.KeyVaultDNSSuffix, name, version)
-	value := "My little secret!"
-
-	secret := keyvault.SecretBundle{
-		ID:    &id,
-		Value: &value,
-	}
-
-	return secret, nil
-}
-
-func (m MockSecretsKeyvault) PutSecret(name string, value string) (keyvault.SecretBundle, error) {
-
-	id := fmt.Sprintf("https://%s.%s/secrets/%s/%s", m.Name, azure.PublicCloud.KeyVaultDNSSuffix, name, "myversion")
-
-	secret := keyvault.SecretBundle{
-		ID:    &id,
-		Value: &value,
-	}
-
-	return secret, nil
-}
-
-func (m MockSecretsKeyvault) ListSecrets() ([]keyvault.SecretBundle, error) {
-
-	var secrets []keyvault.SecretBundle
-
-	for i := 0; i < 5; i++ {
-		id := fmt.Sprintf(
-			"https://%s.%s/secrets/%s/%s",
-			m.Name,
-			azure.PublicCloud.KeyVaultDNSSuffix,
-			fmt.Sprintf("secret-%v", i),
-			"123456789",
-		)
-		val := fmt.Sprintf("My N-th (%v) secret", i)
-		secrets = append(secrets, keyvault.SecretBundle{
-			ID:    &id,
-			Value: &val,
-		})
-	}
-
-	return secrets, nil
-}
-
 func TestNewSecret(t *testing.T) {
 	assert := assert.New(t)
 
-	mock := MockSecretsKeyvault{Name: "mykeyvault"}
+	mock := MockKeyvault{Name: "mykeyvault"}
 
 	secret := NewSecret(mock, "mysecret", "myversion")
 
@@ -111,7 +25,7 @@ func TestNewSecret(t *testing.T) {
 func TestSecret_Get(t *testing.T) {
 	assert := assert.New(t)
 
-	mock := MockSecretsKeyvault{Name: "mykeyvault"}
+	mock := MockKeyvault{Name: "mykeyvault"}
 	secret := NewSecret(mock, "mysecret", "myversion")
 
 	s, err := secret.Get()
@@ -125,7 +39,7 @@ func TestSecret_Get(t *testing.T) {
 func TestSecret_Put(t *testing.T) {
 	assert := assert.New(t)
 
-	mock := MockSecretsKeyvault{Name: "mykeyvault"}
+	mock := MockKeyvault{Name: "mykeyvault"}
 	secret := NewSecret(mock, "mysecret", "")
 	secret.Value = "My little secret!"
 	s, err := secret.Put()
@@ -143,7 +57,7 @@ func TestSecret_Decode(t *testing.T) {
 	rawstring := "My little secret!"
 	encoded_string := base64.StdEncoding.EncodeToString([]byte(rawstring))
 
-	mock := MockSecretsKeyvault{Name: "mykeyvault"}
+	mock := MockKeyvault{Name: "mykeyvault"}
 	secret := NewSecret(mock, "mysecret", "")
 	secret.Value = encoded_string
 	secret, _ = secret.Put()
@@ -164,7 +78,7 @@ func TestSecretList_List(t *testing.T) {
 
 	assert := assert.New(t)
 
-	mock := MockSecretsKeyvault{Name: "mykeyvault"}
+	mock := MockKeyvault{Name: "mykeyvault"}
 	sl := SecretList{}
 	sl.Secrets, _ = sl.List(&mock)
 

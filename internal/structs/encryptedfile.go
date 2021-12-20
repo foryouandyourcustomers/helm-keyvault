@@ -16,6 +16,21 @@ type EncryptedFile struct {
 	LastModified  JTime            `json:"lastmodified,omitempty"`
 }
 
+// splitChunk - splits the given string into chunks with the given size
+func (e *EncryptedFile) splitChunk(original string, size int) []string {
+	// https://stackoverflow.com/questions/35179656/slice-chunking-in-go
+	var value []string
+	for i := 0; i < len(original); i += size {
+		end := i + size
+		if end > len(original) {
+			end = len(original)
+		}
+
+		value = append(value, original[i:end])
+	}
+	return value
+}
+
 // LoadFile - Read and base64 encode the given file
 func (e *EncryptedFile) LoadFile(f string) ([]string, error) {
 	// load file and encode is as base64 url (non padded)
@@ -24,20 +39,13 @@ func (e *EncryptedFile) LoadFile(f string) ([]string, error) {
 		return nil, err
 	}
 
-	// calculate max size (based on 2048bit keys) for data chunks
+	// calculate max size (based on 4096bit keys) for data chunks
 	// https://stackoverflow.com/questions/1496793/rsa-encryption-getting-bad-length
 	chunksize := ((4096 - 384) / 8) + 6
 
-	// split the given encoded data string into chunks
-	// https://stackoverflow.com/questions/35179656/slice-chunking-in-go
 	var value []string
-	for i := 0; i < len(c); i += chunksize {
-		end := i + chunksize
-		if end > len(c) {
-			end = len(c)
-		}
-
-		value = append(value, base64.RawURLEncoding.EncodeToString(c[i:end]))
+	for _, val := range e.splitChunk(string(c), chunksize) {
+		value = append(value, base64.RawURLEncoding.EncodeToString([]byte(val)))
 	}
 	return value, nil
 }

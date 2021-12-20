@@ -1,88 +1,73 @@
 package structs
 
 import (
-	"github.com/Azure/azure-sdk-for-go/profiles/latest/keyvault/keyvault"
-	"github.com/Azure/go-autorest/autorest"
+	"fmt"
+	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/stretchr/testify/assert"
+	"io/ioutil"
+	"os"
 	"testing"
 )
-
-// mocking keyvault until i figure out how to mock the real deal.
-type MockKeysKeyvault struct {
-	Name string
-}
-
-func (m MockKeysKeyvault) EncryptString(key string, version string, encoded string) (keyvault.KeyOperationResult, error) {
-	return keyvault.KeyOperationResult{}, nil
-}
-
-func (m MockKeysKeyvault) DecryptString(key string, version string, encrypted string) (keyvault.KeyOperationResult, error) {
-	return keyvault.KeyOperationResult{}, nil
-}
-
-func (m MockKeysKeyvault) ListKeys() ([]keyvault.KeyBundle, error) {
-	return nil, nil
-}
-
-func (m MockKeysKeyvault) BackupKey(key string) (string, error) {
-	return "", nil
-}
-
-func (m MockKeysKeyvault) CreateKey(key string) (keyvault.KeyBundle, error) {
-	return keyvault.KeyBundle{}, nil
-}
-
-func (m MockKeysKeyvault) GetKey(key string, version string) (keyvault.KeyBundle, error) {
-	return keyvault.KeyBundle{}, nil
-}
-
-func (m MockKeysKeyvault) NewAuthorizer() (autorest.Authorizer, error) {
-	return nil, nil
-}
-
-func (m MockKeysKeyvault) GetKeyvaultName() string {
-	return m.Name
-}
-
-func (m MockKeysKeyvault) GetSecret(name string, version string) (keyvault.SecretBundle, error) {
-	return keyvault.SecretBundle{}, nil
-}
-
-func (m MockKeysKeyvault) PutSecret(name string, value string) (keyvault.SecretBundle, error) {
-
-	return keyvault.SecretBundle{}, nil
-}
-
-func (m MockKeysKeyvault) ListSecrets() ([]keyvault.SecretBundle, error) {
-	return nil, nil
-}
 
 func TestNewKey(t *testing.T) {
 	assert := assert.New(t)
 
-	assert.Nil(nil, "tbd")
+	mock := MockKeyvault{Name: "mykeyvault"}
+
+	key := NewKey(mock, "mykey", "myversion")
+
+	assert.Equal(KeyvaultObjectId(fmt.Sprintf("https://mykeyvault.%s/keys/mykey/myversion", azure.PublicCloud.KeyVaultDNSSuffix)), key.Kid, "should be equal")
+	assert.Equal("mykey", key.Name, "should be equal")
+	assert.Equal("myversion", key.Version, "should be equal")
 }
 
 func TestKey_Backup(t *testing.T) {
 	assert := assert.New(t)
 
-	assert.Nil(nil, "tbd")
+	mock := MockKeyvault{Name: "mykeyvault"}
+	key := NewKey(mock, "mykey", "myversion")
+	tmpfile, _ := ioutil.TempFile("", "testkey_backup")
+	defer os.Remove(tmpfile.Name())
+	_ = tmpfile.Close()
+
+	// write backup data (mock keyvault returns name of key as backup content)
+	err := key.Backup(tmpfile.Name())
+	backup, _ := os.ReadFile(tmpfile.Name())
+	assert.Nil(err, "should be nil")
+	assert.Equal("mykey", string(backup), "should be equal")
 }
 
 func TestKey_Get(t *testing.T) {
 	assert := assert.New(t)
 
-	assert.Nil(nil, "tbd")
+	mock := MockKeyvault{Name: "mykeyvault"}
+	key := NewKey(mock, "mykey", "myversion")
+
+	key, err := key.Get()
+
+	assert.Nil(err, "should be nil")
+	assert.Equal("mykey", key.Name, "should be equal")
+	assert.Equal("myversion", key.Version, "should be equal")
+	assert.Equal(KeyvaultObjectId(fmt.Sprintf("https://mykeyvault.%s/keys/mykey/myversion", azure.PublicCloud.KeyVaultDNSSuffix)), key.Kid, "should be equal")
+
 }
 
 func TestKey_Create(t *testing.T) {
 	assert := assert.New(t)
 
-	assert.Nil(nil, "tbd")
+	mock := MockKeyvault{Name: "mykeyvault"}
+	key := NewKey(mock, "mykey", "")
+	key, err := key.Create()
+
+	assert.Error(err, "should be errored - mock keyvault doesnt handle multiple keys")
 }
 
 func TestKeyList_List(t *testing.T) {
 	assert := assert.New(t)
 
-	assert.Nil(nil, "tbd")
+	mock := MockKeyvault{Name: "mykeyvault"}
+	kl := KeyList{}
+	kl.Keys, _ = kl.List(&mock)
+
+	assert.Len(kl.Keys, 5, "should be 5")
 }
