@@ -27,7 +27,7 @@ jobs:
       - name: Coveralls
         uses: coverallsapp/github-action@v1.1.2
         with:
-          github-token: ${{ secrets.github_token }}
+          github-token: coverallsapp/github-action@v1.1.2
           path-to-lcov: coverage.lcov
              
       - name: Run GoReleaser
