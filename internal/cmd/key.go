@@ -10,7 +10,7 @@ import (
 func ListKeys(kv string) error {
 
 	// initialize keyvault object
-	keyvault, err := structs.NewKeyvault(kv)
+	keyvault, err := structs.NewKeyVault(kv)
 	if err != nil {
 		return err
 	}
@@ -18,7 +18,7 @@ func ListKeys(kv string) error {
 	// initialize list
 	sl := structs.KeyList{}
 
-	sl.Keys, err = sl.List(&keyvault)
+	sl.Keys, err = sl.List(keyvault)
 	if err != nil {
 		return err
 	}
@@ -31,12 +31,12 @@ func ListKeys(kv string) error {
 // BackupKey - Backup an azure keyvault key
 func BackupKey(kv string, k string, f string) error {
 
-	keyvault, err := structs.NewKeyvault(kv)
+	keyvault, err := structs.NewKeyVault(kv)
 	if err != nil {
 		return err
 	}
 
-	key := structs.NewKey(&keyvault, k, "")
+	key := structs.NewKey(keyvault, k, "")
 	err = key.Backup(f)
 	return err
 }
@@ -44,12 +44,12 @@ func BackupKey(kv string, k string, f string) error {
 // CreateKey - Create an azure keyvault key
 func CreateKey(kv string, k string) error {
 
-	keyvault, err := structs.NewKeyvault(kv)
+	keyvault, err := structs.NewKeyVault(kv)
 	if err != nil {
 		return err
 	}
 
-	key := structs.NewKey(&keyvault, k, "")
+	key := structs.NewKey(keyvault, k, "")
 
 	key, err = key.Create()
 	if err != nil {

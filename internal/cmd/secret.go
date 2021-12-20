@@ -12,12 +12,12 @@ import (
 func GetSecret(kv string, sn string, ve string) error {
 
 	// retrieve and decode base64 encoded secret
-	keyvault, err := structs.NewKeyvault(kv)
+	keyvault, err := structs.NewKeyVault(kv)
 	if err != nil {
 		return err
 	}
 
-	sec := structs.NewSecret(&keyvault, sn, ve)
+	sec := structs.NewSecret(keyvault, sn, ve)
 
 	sec, err = sec.Get()
 	if err != nil {
@@ -44,12 +44,12 @@ func PutSecret(kv string, sn string, f string) error {
 
 	// put secret to keyvault
 	// retrieve and decode base64 encoded secret
-	keyvault, err := structs.NewKeyvault(kv)
+	keyvault, err := structs.NewKeyVault(kv)
 	if err != nil {
 		return err
 	}
 
-	sec := structs.NewSecret(&keyvault, sn, "")
+	sec := structs.NewSecret(keyvault, sn, "")
 	sec.Value = e
 
 	sec, err = sec.Put()
@@ -65,7 +65,7 @@ func PutSecret(kv string, sn string, f string) error {
 func ListSecrets(kv string) error {
 
 	// initialize keyvault object
-	keyvault, err := structs.NewKeyvault(kv)
+	keyvault, err := structs.NewKeyVault(kv)
 	if err != nil {
 		return err
 	}
@@ -73,7 +73,7 @@ func ListSecrets(kv string) error {
 	// inialize secret list
 	sl := structs.SecretList{}
 
-	sl.Secrets, err = sl.List(&keyvault)
+	sl.Secrets, err = sl.List(keyvault)
 	if err != nil {
 		return err
 	}
@@ -86,12 +86,12 @@ func ListSecrets(kv string) error {
 // BackupSecret - Create a backup of the specified secret
 func BackupSecret(kv string, secret string, file string) error {
 
-	keyvault, err := structs.NewKeyvault(kv)
+	keyvault, err := structs.NewKeyVault(kv)
 	if err != nil {
 		return err
 	}
 
-	sec := structs.NewSecret(&keyvault, secret, "")
+	sec := structs.NewSecret(keyvault, secret, "")
 	err = sec.Backup(file)
 	return err
 }

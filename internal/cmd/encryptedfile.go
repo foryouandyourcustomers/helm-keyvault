@@ -10,7 +10,7 @@ import (
 func EncryptFile(kv string, k string, v string, f string) error {
 
 	// initialzie keyvault
-	keyvault, err := structs.NewKeyvault(kv)
+	keyvault, err := structs.NewKeyVault(kv)
 	if err != nil {
 		return err
 	}
@@ -22,7 +22,7 @@ func EncryptFile(kv string, k string, v string, f string) error {
 	// the keyvault. this is required to ensure the file
 	// can be decrypted even after a new key version is created
 	if v == "" {
-		k := structs.NewKey(&keyvault, k, "")
+		k := structs.NewKey(keyvault, k, "")
 		k, err := k.Get()
 		if err != nil {
 			return err
@@ -40,7 +40,7 @@ func EncryptFile(kv string, k string, v string, f string) error {
 	}
 
 	// encrypt the given dats
-	ef.EncryptedData, err = ef.EncryptData(&keyvault, k, v)
+	ef.EncryptedData, err = ef.EncryptData(keyvault, k, v)
 	if err != nil {
 		return err
 	}
@@ -63,9 +63,9 @@ func DecryptFile(kv string, k string, v string, f string) error {
 	}
 
 	// overwrite keyvault, key and version if required
-	keyvault, err := structs.NewKeyvault(ef.Kid.GetKeyvault())
+	keyvault, err := structs.NewKeyVault(ef.Kid.GetKeyvault())
 	if kv != "" {
-		keyvault, err = structs.NewKeyvault(kv)
+		keyvault, err = structs.NewKeyVault(kv)
 	}
 	if err != nil {
 		return err
@@ -82,7 +82,7 @@ func DecryptFile(kv string, k string, v string, f string) error {
 	}
 
 	// decrypt data, overwrite given kid with optional key
-	ef.EncodedData, err = ef.DecryptData(&keyvault, key, version)
+	ef.EncodedData, err = ef.DecryptData(keyvault, key, version)
 	if err != nil {
 		return err
 	}

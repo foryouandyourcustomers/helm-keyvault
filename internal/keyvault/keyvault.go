@@ -8,6 +8,7 @@ import (
 	"github.com/Azure/azure-sdk-for-go/profiles/latest/keyvault/keyvault"
 	kvauth "github.com/Azure/azure-sdk-for-go/services/keyvault/auth"
 	"github.com/Azure/go-autorest/autorest"
+	"github.com/Azure/go-autorest/autorest/azure"
 	log "github.com/sirupsen/logrus"
 	"path"
 )
@@ -22,6 +23,7 @@ const (
 type KeyvaultInterface interface {
 	NewAuthorizer() (autorest.Authorizer, error)
 	GetKeyvaultName() string
+	SetKeyvaultName(name string)
 	// secrets operations
 	GetSecret(sn string, sv string) (keyvault.SecretBundle, error)
 	PutSecret(name string, value string) (keyvault.SecretBundle, error)
@@ -50,6 +52,13 @@ func (k Keyvault) MarshalJSON() ([]byte, error) {
 
 func (k *Keyvault) GetKeyvaultName() string {
 	return k.Name
+}
+
+func (k *Keyvault) SetKeyvaultName(name string) {
+	if name != "" {
+		k.Name = name
+		k.BaseUrl = fmt.Sprintf("https://%s.%s", name, azure.PublicCloud.KeyVaultDNSSuffix)
+	}
 }
 
 // NewAuthorizer - Returns an authorizer object dependent on config

@@ -11,7 +11,15 @@ import (
 
 // mocking keyvault until i figure out how to mock the real deal.
 type MockKeyvault struct {
-	Name string
+	Name    string
+	BaseUrl string
+}
+
+func (m MockKeyvault) SetKeyvaultName(name string) {
+	if name != "" {
+		m.Name = name
+		m.BaseUrl = fmt.Sprintf("https://%s.%s", name, azure.PublicCloud.KeyVaultDNSSuffix)
+	}
 }
 
 func (m MockKeyvault) EncryptString(key string, version string, encoded string) (keyvault.KeyOperationResult, error) {

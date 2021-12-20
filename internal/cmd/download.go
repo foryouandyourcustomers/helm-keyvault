@@ -26,12 +26,12 @@ func (u *keyvaultUri) download() (string, error) {
 
 	// create secrets struct
 	secret := structs.Secret{Id: structs.KeyvaultObjectId(uri)}
-	kv, err := structs.NewKeyvault(secret.Id.GetKeyvault())
+	kv, err := structs.NewKeyVault(secret.Id.GetKeyvault())
 	if err != nil {
 		return "", err
 	}
 
-	secret.KeyVault = &kv
+	secret.KeyVault = kv
 	secret.Name = secret.Id.GetName()
 	secret.Version = secret.Id.GetVersion()
 
@@ -66,13 +66,13 @@ func (u *fileUri) download() (string, error) {
 		return "", err
 	}
 
-	keyvault, err := structs.NewKeyvault(encfile.Kid.GetKeyvault())
+	keyvault, err := structs.NewKeyVault(encfile.Kid.GetKeyvault())
 	if err != nil {
 		return "", err
 	}
 
 	// decrypt the given data
-	encfile.EncodedData, err = encfile.DecryptData(&keyvault, encfile.Kid.GetName(), encfile.Kid.GetVersion())
+	encfile.EncodedData, err = encfile.DecryptData(keyvault, encfile.Kid.GetName(), encfile.Kid.GetVersion())
 	if err != nil {
 		return "", err
 	}

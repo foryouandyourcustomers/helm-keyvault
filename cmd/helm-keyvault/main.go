@@ -10,6 +10,24 @@ import (
 	"strings"
 )
 
+//// beforeCommand - generate keyvault structure for all but the downloader and decrypt cli
+//func beforeCommand(c *cli.Context) (keyvault.KeyvaultInterface, error) {
+//	kvname := c.String("keyvault")
+//
+//	// return keyvault object with keyvault name setup
+//	if kvname != "" {
+//		kv, err := structs.NewKeyvault(kvname)
+//		if err != nil {
+//			return nil, err
+//		}
+//		return &kv, nil
+//	}
+//
+//	// if kvname is empty return an empty keyvault struct
+//	return &keyvault.Keyvault{}, nil
+//
+//}
+
 func main() {
 
 	// flags used for cli commands
