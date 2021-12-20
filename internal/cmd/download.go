@@ -66,8 +66,13 @@ func (u *fileUri) download() (string, error) {
 		return "", err
 	}
 
+	keyvault, err := structs.NewKeyvault(encfile.Kid.GetKeyvault())
+	if err != nil {
+		return "", err
+	}
+
 	// decrypt the given data
-	encfile.EncodedData, err = encfile.DecryptData(encfile.Kid.GetKeyvault(), encfile.Kid.GetName(), encfile.Kid.GetVersion())
+	encfile.EncodedData, err = encfile.DecryptData(&keyvault, encfile.Kid.GetName(), encfile.Kid.GetVersion())
 	if err != nil {
 		return "", err
 	}

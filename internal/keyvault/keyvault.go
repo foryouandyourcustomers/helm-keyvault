@@ -22,9 +22,17 @@ const (
 type KeyvaultInterface interface {
 	NewAuthorizer() (autorest.Authorizer, error)
 	GetKeyvaultName() string
+	// secrets operations
 	GetSecret(sn string, sv string) (keyvault.SecretBundle, error)
 	PutSecret(name string, value string) (keyvault.SecretBundle, error)
 	ListSecrets() ([]keyvault.SecretBundle, error)
+	// keys operations
+	EncryptString(key string, version string, encoded string) (keyvault.KeyOperationResult, error)
+	DecryptString(key string, version string, encrypted string) (keyvault.KeyOperationResult, error)
+	ListKeys() ([]keyvault.KeyBundle, error)
+	BackupKey(key string) (string, error)
+	CreateKey(key string) (keyvault.KeyBundle, error)
+	GetKey(key string, version string) (keyvault.KeyBundle, error)
 }
 
 type Keyvault struct {

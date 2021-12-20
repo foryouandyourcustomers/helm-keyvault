@@ -6,26 +6,26 @@ import (
 	"os"
 )
 
-type Key struct {
-	Kid      KeyvaultObjectId `json:"kid,omitempty"`
-	Name     string           `json:"name,omitempty"`
-	KeyVault string           `json:"keyvault,omitempty"`
-	Version  string           `json:"version,omitempty"`
-}
-
 // NewKey - create a new Key struct
-func NewKey(kv string, key string, version string) Key {
+func NewKey(kv keyvault.KeyvaultInterface, key string, version string) Key {
 	return Key{
-		Kid:      NewKeyvaultObjectId(kv, "keys", key, version),
+		Kid:      NewKeyvaultObjectId(kv.GetKeyvaultName(), "keys", key, version),
 		Name:     key,
 		KeyVault: kv,
 		Version:  version,
 	}
 }
 
+type Key struct {
+	Kid      KeyvaultObjectId           `json:"kid,omitempty"`
+	Name     string                     `json:"name,omitempty"`
+	KeyVault keyvault.KeyvaultInterface `json:"keyvault,omitempty"`
+	Version  string                     `json:"version,omitempty"`
+}
+
 // Backup - create backup of key and write it into the given file
 func (k *Key) Backup(f string) error {
-	backup, err := keyvault.BackupKey(k.KeyVault, k.Name)
+	backup, err := k.KeyVault.BackupKey(k.Name)
 	if err != nil {
 		return err
 	}
@@ -45,7 +45,7 @@ func (k *Key) Backup(f string) error {
 
 // Get - Retrieve key information from keyvault
 func (k *Key) Get() (Key, error) {
-	kb, err := keyvault.GetKey(k.KeyVault, k.Name, k.Version)
+	kb, err := k.KeyVault.GetKey(k.Name, k.Version)
 	if err != nil {
 		return Key{}, err
 	}
@@ -54,20 +54,20 @@ func (k *Key) Get() (Key, error) {
 	return Key{
 		Kid:      koid,
 		Name:     koid.GetName(),
-		KeyVault: koid.GetKeyvault(),
+		KeyVault: k.KeyVault,
 		Version:  koid.GetVersion(),
 	}, nil
 }
 
 func (k *Key) Create() (Key, error) {
 	// first check if the key already exists
-	kb, err := keyvault.GetKey(k.KeyVault, k.Name, k.Version)
+	kb, err := k.KeyVault.GetKey(k.Name, k.Version)
 	// abort here if the key can be retrieved
 	if err == nil {
 		return Key{}, errors.New("Key already exists.")
 	}
 
-	kb, err = keyvault.CreateKey(k.KeyVault, k.Name)
+	kb, err = k.KeyVault.CreateKey(k.Name)
 	if err != nil {
 		return Key{}, err
 	}
@@ -76,7 +76,7 @@ func (k *Key) Create() (Key, error) {
 	return Key{
 		Kid:      koid,
 		Name:     koid.GetName(),
-		KeyVault: koid.GetKeyvault(),
+		KeyVault: k.KeyVault,
 		Version:  koid.GetVersion(),
 	}, nil
 
@@ -86,8 +86,8 @@ type KeyList struct {
 	Keys []Key `json:"keys,omitempty"`
 }
 
-func (sl *KeyList) List(kv string) ([]Key, error) {
-	sk, err := keyvault.ListKeys(kv)
+func (sl *KeyList) List(kv keyvault.KeyvaultInterface) ([]Key, error) {
+	sk, err := kv.ListKeys()
 	if err != nil {
 		return nil, err
 	}
@@ -96,14 +96,13 @@ func (sl *KeyList) List(kv string) ([]Key, error) {
 	for _, k := range sk {
 		koid := KeyvaultObjectId(*k.Key.Kid)
 		sn := koid.GetName()
-		skv := koid.GetKeyvault()
 		sve := koid.GetVersion()
 
 		keys = append(keys,
 			Key{
 				Kid:      koid,
 				Name:     sn,
-				KeyVault: skv,
+				KeyVault: kv,
 				Version:  sve,
 			})
 	}

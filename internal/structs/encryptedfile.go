@@ -59,17 +59,12 @@ func (e *EncryptedFile) LoadEncryptedFile(f string) (EncryptedFile, error) {
 }
 
 // EncryptData - Encrypt encoded data strings
-func (e *EncryptedFile) EncryptData() ([]string, error) {
-
-	// get keyvault and key info
-	kv := e.Kid.GetKeyvault()
-	key := e.Kid.GetName()
-	version := e.Kid.GetVersion()
+func (e *EncryptedFile) EncryptData(kv keyvault.KeyvaultInterface, key string, version string) ([]string, error) {
 
 	// loop trough the chunked encoded data strings
 	var value []string
 	for _, d := range e.EncodedData {
-		enc, err := keyvault.EncryptString(kv, key, version, d)
+		enc, err := kv.EncryptString(key, version, d)
 		if err != nil {
 			return nil, err
 		}
@@ -79,37 +74,12 @@ func (e *EncryptedFile) EncryptData() ([]string, error) {
 	return value, nil
 }
 
-func (e *EncryptedFile) DecryptData(kv string, k string, v string) ([]string, error) {
-
-	// check if overwrite values are set for keyvault,
-	// key and key version
-	kvname := kv
-	var err error
-	if kvname == "" {
-		kvname = e.Kid.GetKeyvault()
-		if err != nil {
-			return nil, err
-		}
-	}
-	key := k
-	if key == "" {
-		key = e.Kid.GetName()
-		if err != nil {
-			return nil, err
-		}
-	}
-	version := v
-	if version == "" {
-		version = e.Kid.GetVersion()
-		if err != nil {
-			return nil, err
-		}
-	}
+func (e *EncryptedFile) DecryptData(kv keyvault.KeyvaultInterface, key string, version string) ([]string, error) {
 
 	// decrypt encrypted data chunks
 	var value []string
 	for _, chunk := range e.EncryptedData {
-		dec, err := keyvault.DecryptString(kvname, key, version, chunk)
+		dec, err := kv.DecryptString(key, version, chunk)
 		if err != nil {
 			return nil, err
 		}
