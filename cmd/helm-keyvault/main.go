@@ -10,26 +10,7 @@ import (
 	"strings"
 )
 
-//// beforeCommand - generate keyvault structure for all but the downloader and decrypt cli
-//func beforeCommand(c *cli.Context) (keyvault.KeyvaultInterface, error) {
-//	kvname := c.String("keyvault")
-//
-//	// return keyvault object with keyvault name setup
-//	if kvname != "" {
-//		kv, err := structs.NewKeyvault(kvname)
-//		if err != nil {
-//			return nil, err
-//		}
-//		return &kv, nil
-//	}
-//
-//	// if kvname is empty return an empty keyvault struct
-//	return &keyvault.Keyvault{}, nil
-//
-//}
-
-func main() {
-
+func run(args []string) error {
 	// flags used for cli commands
 	flagKeyVault := cli.StringFlag{
 		Name:     "keyvault",
@@ -249,7 +230,15 @@ func main() {
 		},
 	}
 
-	err := app.Run(os.Args)
+	err := app.Run(args)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func main() {
+	err := run(os.Args)
 	if err != nil {
 		log.Fatal(err)
 	}
