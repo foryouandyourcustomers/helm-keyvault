@@ -36,8 +36,8 @@ func (m *MockKeyVault) SetKeyvaultName(name string) {
 	}
 }
 
-func (m *MockKeyVault) GetSecret(sn string, sv string) (mskeyvault.SecretBundle, error) {
-	id := string(structs.NewKeyvaultObjectId(m.Name, "secrets", sn, sv))
+func (m *MockKeyVault) GetSecret(name string, version string) (mskeyvault.SecretBundle, error) {
+	id := string(structs.NewKeyvaultObjectId(m.Name, "secrets", name, version))
 	value := "Exammple Value"
 	return mskeyvault.SecretBundle{
 		ID:    &id,
@@ -46,18 +46,37 @@ func (m *MockKeyVault) GetSecret(sn string, sv string) (mskeyvault.SecretBundle,
 }
 
 func (m *MockKeyVault) PutSecret(name string, value string) (mskeyvault.SecretBundle, error) {
-	//TODO implement me
-	panic("implement me")
+	version := "123456"
+	id := string(structs.NewKeyvaultObjectId(m.Name, "secrets", name, version))
+	return mskeyvault.SecretBundle{
+		ID:    &id,
+		Value: &value,
+	}, nil
 }
 
 func (m *MockKeyVault) ListSecrets() ([]mskeyvault.SecretBundle, error) {
-	//TODO implement me
-	panic("implement me")
-}
 
-func (m *MockKeyVault) BackupSecret(sn string) (string, error) {
-	//TODO implement me
-	panic("implement me")
+	var secrets []mskeyvault.SecretBundle
+
+	for i := 0; i < 5; i++ {
+		id := fmt.Sprintf(
+			"https://%s.%s/secrets/%s/%s",
+			m.Name,
+			azure.PublicCloud.KeyVaultDNSSuffix,
+			fmt.Sprintf("secret-%v", i),
+			"123456789",
+		)
+		val := fmt.Sprintf("My N-th (%v) secret", i)
+		secrets = append(secrets, mskeyvault.SecretBundle{
+			ID:    &id,
+			Value: &val,
+		})
+	}
+
+	return secrets, nil
+}
+func (m *MockKeyVault) BackupSecret(secret string) (string, error) {
+	return secret, nil
 }
 
 func (m *MockKeyVault) EncryptString(key string, version string, encoded string) (mskeyvault.KeyOperationResult, error) {
@@ -81,8 +100,7 @@ func (m *MockKeyVault) BackupKey(key string) (string, error) {
 }
 
 func (m *MockKeyVault) CreateKey(key string) (mskeyvault.KeyBundle, error) {
-	//TODO implement me
-	panic("implement me")
+	return mskeyvault.KeyBundle{}, nil
 }
 
 func (m *MockKeyVault) GetKey(key string, version string) (mskeyvault.KeyBundle, error) {
