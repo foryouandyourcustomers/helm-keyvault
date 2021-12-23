@@ -33,10 +33,6 @@ jobs:
           AZURE_TENANT_ID: "e1faa3ce-6181-47ad-abcc-9154da4f981e"
           AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
           AZURE_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
-#
-#      - name: Run integration tests
-#        run: go test -v -covermode=count -coverprofile=coverage-integration.out ./cmd/helm-keyvault
-
 
       #
       # coverage report
