@@ -90,7 +90,7 @@ keyvault+secret://` as url for the values file.
 
 ```bash
 # downlaod the latest secret
---values keyvault+secret://helm-keyvault-test.vault.azure.net/secrets/argocd-yaml
+--values keyvault+secret://helm-keyvault-test/argocd-yaml
 # downlaod the secret with a specific verion
 --values keyvault+secret://helm-keyvault-test.vault.azure.net/secrets/argocd-yaml/2d6e0430c0724ad1bdc277af8b549c57
 ```

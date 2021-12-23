@@ -4,36 +4,36 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
-	"github.com/foryouandyourcustomers/helm-keyvault/internal/keyvault"
+	"github.com/foryouandyourcustomers/helm-keyvault/internal/structs"
 	"io/ioutil"
 )
 
 // GetSecret - Get secret from given keyvault
-func GetSecret(id string) error {
+func GetSecret(kv string, sn string, ve string) error {
 
-	// parse given id into its keyvault components
-	su, err := newSecretUri(id)
+	// retrieve and decode base64 encoded secret
+	keyvault, err := structs.NewKeyVault(kv)
 	if err != nil {
 		return err
 	}
 
-	// retrieve and decode secret content
-	value, err := su.download()
+	sec := structs.NewSecret(keyvault, sn, ve)
+
+	sec, err = sec.Get()
 	if err != nil {
 		return err
 	}
-	fmt.Print(value)
+
+	j, err := json.Marshal(sec)
+	if err != nil {
+		return err
+	}
+	fmt.Print(string(j))
 	return nil
 }
 
 // PutSecret - Encode file and put secret into keyvault
-func PutSecret(id string, f string) error {
-
-	// parse given id into its keyvault components
-	su, err := newSecretUri(id)
-	if err != nil {
-		return err
-	}
+func PutSecret(kv string, sn string, f string) error {
 
 	// read file and convert it to base64
 	c, err := ioutil.ReadFile(f)
@@ -42,25 +42,56 @@ func PutSecret(id string, f string) error {
 	}
 	e := base64.StdEncoding.EncodeToString(c)
 
-	// upload the file content'
-	value, err := su.upload(e)
+	// put secret to keyvault
+	// retrieve and decode base64 encoded secret
+	keyvault, err := structs.NewKeyVault(kv)
 	if err != nil {
 		return err
 	}
-	fmt.Print(value)
+
+	sec := structs.NewSecret(keyvault, sn, "")
+	sec.Value = e
+
+	sec, err = sec.Put()
+	if err != nil {
+		return err
+	}
+	j, err := json.Marshal(sec)
+	fmt.Print(string(j))
 	return nil
 }
 
 // ListSecrets - List all secrets in the keyvault
 func ListSecrets(kv string) error {
-	s, err := keyvault.ListSecrets(kv)
+
+	// initialize keyvault object
+	keyvault, err := structs.NewKeyVault(kv)
 	if err != nil {
 		return err
 	}
-	j, err := json.Marshal(s)
+
+	// inialize secret list
+	sl := structs.SecretList{}
+
+	sl.Secrets, err = sl.List(keyvault)
 	if err != nil {
 		return err
 	}
+
+	j, err := json.Marshal(sl)
 	fmt.Print(string(j))
 	return nil
+}
+
+// BackupSecret - Create a backup of the specified secret
+func BackupSecret(kv string, secret string, file string) error {
+
+	keyvault, err := structs.NewKeyVault(kv)
+	if err != nil {
+		return err
+	}
+
+	sec := structs.NewSecret(keyvault, secret, "")
+	err = sec.Backup(file)
+	return err
 }

@@ -1,9 +1,10 @@
 name: Build
 on:
   workflow_dispatch:
+  pull_request:
   push:
     tags:
-      - "*"
+      - '*'
 
 jobs:
   build:
@@ -13,13 +14,51 @@ jobs:
       - name: Install Go
         uses: actions/setup-go@v2
         with:
-          go-version: 1.16.x
+          go-version: 1.17.x
 
       - name: checkout sources
-        uses: actions/checkout@v1
+        uses: actions/checkout@v2
 
+      #
+      # run unit and integration tests
+      #
+
+      - name: Run unit and integration tests Tests
+        run: go test -v -covermode=count -coverprofile=coverage.out ./...
+        env:
+          INTEGRATION: "yes"
+          AZURE_SUBSCRIPTION: "c2a322e5-83ef-41b0-ba56-0837e9ffcf53"
+          AZURE_RESOURCE_GROUP: "helm-keyvault-integration"
+          AZURE_KEYVAULT_NAME: "fyayc-hkv-integ"
+          AZURE_TENANT_ID: "e1faa3ce-6181-47ad-abcc-9154da4f981e"
+          AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+          AZURE_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
+
+      #
+      # coverage report
+      #
+
+      # https://github.com/jandelgado/golang-ci-template-github-actions/blob/master/.github/workflows/test.yml
+      - name: Convert coverage.out to coverage.lcov
+        uses: jandelgado/gcov2lcov-action@v1.0.6
+        with:
+          infile: coverage.out
+          outfile: coverage.lcov
+
+      - name: Coveralls for unit tests
+        uses: coverallsapp/github-action@master
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          path-to-lcov: coverage.lcov
+
+      #
+      # go release (only on tag!)
+      #
+                        
       - name: Run GoReleaser
         uses: goreleaser/goreleaser-action@v2
+        # only create a release on a new tag
+        if: startsWith(github.ref, 'refs/tags/')
         with:
           # either 'goreleaser' (default) or 'goreleaser-pro'
           distribution: goreleaser

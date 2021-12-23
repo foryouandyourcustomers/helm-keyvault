@@ -2,107 +2,295 @@ package keyvault
 
 import (
 	"context"
+	"encoding/base64"
+	"errors"
 	"fmt"
+	"github.com/Azure/azure-sdk-for-go/profiles/latest/keyvault/keyvault"
+	kvauth "github.com/Azure/azure-sdk-for-go/services/keyvault/auth"
 	"github.com/Azure/go-autorest/autorest"
 	"github.com/Azure/go-autorest/autorest/azure"
 	log "github.com/sirupsen/logrus"
+	"os"
 	"path"
-
-	"github.com/foryouandyourcustomers/helm-keyvault/internal/secrets"
-
-	"github.com/Azure/azure-sdk-for-go/profiles/latest/keyvault/keyvault"
-	kvauth "github.com/Azure/azure-sdk-for-go/services/keyvault/auth"
 )
 
-var (
-	authorizer autorest.Authorizer
+const (
+	KeyType keyvault.JSONWebKeyType                = "RSA"
+	KeySize int32                                  = 4096
+	KeyAlgo keyvault.JSONWebKeyEncryptionAlgorithm = keyvault.RSA15
 )
 
-// initialize keyvault authorizer
-func init() {
-	// first try to get authorizer from cli
+// Keyvault Interface - implements Keyvault struct and allows for easier mocking for testing
+type KeyvaultInterface interface {
+	NewAuthorizer() (autorest.Authorizer, error)
+	GetKeyvaultName() string
+	SetKeyvaultName(name string)
+	// secrets operations
+	GetSecret(sn string, sv string) (keyvault.SecretBundle, error)
+	PutSecret(name string, value string) (keyvault.SecretBundle, error)
+	ListSecrets() ([]keyvault.SecretBundle, error)
+	BackupSecret(sn string) (string, error)
+	// keys operations
+	EncryptString(key string, version string, encoded string) (keyvault.KeyOperationResult, error)
+	DecryptString(key string, version string, encrypted string) (keyvault.KeyOperationResult, error)
+	ListKeys() ([]keyvault.KeyBundle, error)
+	BackupKey(key string) (string, error)
+	CreateKey(key string) (keyvault.KeyBundle, error)
+	GetKey(key string, version string) (keyvault.KeyBundle, error)
+}
+
+type Keyvault struct {
+	Client     keyvault.BaseClient
+	Authorizer autorest.Authorizer
+	Name       string
+	BaseUrl    string
+}
+
+func (k Keyvault) MarshalJSON() ([]byte, error) {
+	name := fmt.Sprintf("\"%s\"", k.Name)
+	return []byte(name), nil
+}
+
+func (k *Keyvault) GetKeyvaultName() string {
+	return k.Name
+}
+
+func (k *Keyvault) SetKeyvaultName(name string) {
+	if name != "" {
+		k.Name = name
+		k.BaseUrl = fmt.Sprintf("https://%s.%s", name, azure.PublicCloud.KeyVaultDNSSuffix)
+	}
+}
+
+// NewAuthorizer - Returns an authorizer object dependent on config
+func (k *Keyvault) NewAuthorizer() (autorest.Authorizer, error) {
+	var authorizer autorest.Authorizer
 	var err error
 
-	log.Debug("Try to get authentication from file")
 	authorizer, err = kvauth.NewAuthorizerFromFile()
 	if err != nil {
-		log.Debug("Try to get credentials from envrionment")
 		authorizer, err = kvauth.NewAuthorizerFromEnvironment()
 		if err != nil {
-			log.Debug("Get login info from azure cli")
 			authorizer, err = kvauth.NewAuthorizerFromCLI()
 			if err != nil {
-				panic("Unable to authenticate with AUTH file, ENV vars and local cli. Aborting.")
+				return nil, errors.New("Unable to initialize keyvault authorizer")
 			}
 		}
 	}
+
+	return authorizer, nil
 }
 
 // GetSecret - return a secret object
-func GetSecret(kv string, sn string, sv string) (secrets.Secret, error) {
+func (k *Keyvault) GetSecret(sn string, sv string) (keyvault.SecretBundle, error) {
 
-	c := keyvault.New()
-	c.Authorizer = authorizer
-	s, err := c.GetSecret(context.Background(), fmt.Sprintf("https://%s", kv), sn, sv)
+	s, err := k.Client.GetSecret(context.Background(), k.BaseUrl, sn, sv)
 	if err != nil {
-		return secrets.Secret{}, err
+		return keyvault.SecretBundle{}, err
 	}
 
-	return secrets.Secret{
-		Id:      *s.ID,
-		Name:    sn,
-		Version: path.Base(*s.ID),
-		Value:   *s.Value,
-	}, nil
+	return s, nil
 }
 
 // PutSecret - put secret into keyvault
-func PutSecret(kv string, sn string, cn string) (keyvault.SecretBundle, error) {
-	c := keyvault.New()
-	c.Authorizer = authorizer
+func (k *Keyvault) PutSecret(name string, value string) (keyvault.SecretBundle, error) {
 
 	ct := "base64"
 	sp := keyvault.SecretSetParameters{
-		Value:       &cn,
+		Value:       &value,
 		ContentType: &ct,
 	}
 
-	s, err := c.SetSecret(context.Background(), fmt.Sprintf("https://%s", kv), sn, sp)
+	s, err := k.Client.SetSecret(context.Background(), k.BaseUrl, name, sp)
 	if err != nil {
 		return keyvault.SecretBundle{}, err
 	}
 	return s, nil
 }
 
-// ListSecrets - list all secrets in the specified keyvault
-func ListSecrets(kv string) (secrets.SecretList, error) {
-	c := keyvault.New()
-	c.Authorizer = authorizer
+// BackupSecret - create a backup file of the given secret
+func (k *Keyvault) BackupSecret(secret string) (string, error) {
+	kb, err := k.Client.BackupSecret(context.Background(), k.BaseUrl, secret)
+	if err != nil {
+		return "", err
+	}
 
-	baseurl := fmt.Sprintf("https://%s.%s", kv, azure.PublicCloud.KeyVaultDNSSuffix)
+	dec, err := base64.RawURLEncoding.DecodeString(*kb.Value)
+	if err != nil {
+		return "", err
+	}
+	return string(dec), nil
+}
+
+// RestoreSecret - restore a secret via backup file
+func (k *Keyvault) RestoreSecret(file string) (keyvault.SecretBundle, error) {
+
+	fr, err := os.ReadFile(file)
+	if err != nil {
+		return keyvault.SecretBundle{}, err
+	}
+	fc := base64.RawURLEncoding.EncodeToString(fr)
+
+	params := keyvault.SecretRestoreParameters{
+		SecretBundleBackup: &fc,
+	}
+
+	s, err := k.Client.RestoreSecret(context.Background(), k.BaseUrl, params)
+	if err != nil {
+		return keyvault.SecretBundle{}, err
+	}
+
+	return s, nil
+}
+
+// ListSecrets - list all secrets in the specified keyvault
+func (k *Keyvault) ListSecrets() ([]keyvault.SecretBundle, error) {
 
 	ctx := context.Background()
-	siter, err := c.GetSecretsComplete(ctx, baseurl, nil)
+	siter, err := k.Client.GetSecretsComplete(ctx, k.BaseUrl, nil)
 	if err != nil {
 		log.Fatalf("unable to get list of secrets: %v\n", err)
 	}
 
-	var s secrets.SecretList
+	var s []keyvault.SecretBundle
 
 	for siter.NotDone() {
 		i := siter.Value()
 
 		key := path.Base(*i.ID)
-		b, err := c.GetSecret(context.Background(), baseurl, key, "")
+		b, err := k.Client.GetSecret(context.Background(), k.BaseUrl, key, "")
 		if err != nil {
-			return secrets.SecretList{}, err
+			return []keyvault.SecretBundle{}, err
 		}
 
-		s.Secrets = append(s.Secrets, secrets.Secret{Id: *b.ID, Name: path.Base(path.Dir(*b.ID))})
+		s = append(s, b)
 		err = siter.NextWithContext(ctx)
 		if err != nil {
-			return secrets.SecretList{}, err
+			return []keyvault.SecretBundle{}, err
 		}
+	}
+
+	return s, nil
+}
+
+// EncryptString - encrypt a given file
+func (k *Keyvault) EncryptString(key string, version string, encoded string) (keyvault.KeyOperationResult, error) {
+
+	ctx := context.Background()
+	param := keyvault.KeyOperationsParameters{
+		Algorithm: KeyAlgo,
+		Value:     &encoded,
+	}
+	r, err := k.Client.Encrypt(ctx, k.BaseUrl, key, version, param)
+	if err != nil {
+		return keyvault.KeyOperationResult{}, err
+	}
+
+	return r, nil
+}
+
+func (k *Keyvault) DecryptString(key string, version string, encrypted string) (keyvault.KeyOperationResult, error) {
+
+	ctx := context.Background()
+	param := keyvault.KeyOperationsParameters{
+		Algorithm: KeyAlgo,
+		Value:     &encrypted,
+	}
+	r, err := k.Client.Decrypt(ctx, k.BaseUrl, key, version, param)
+	if err != nil {
+		return keyvault.KeyOperationResult{}, err
+	}
+
+	return r, nil
+}
+
+// ListKeys - list all keys in the specified keyvault
+func (k *Keyvault) ListKeys() ([]keyvault.KeyBundle, error) {
+
+	ctx := context.Background()
+	siter, err := k.Client.GetKeysComplete(ctx, k.BaseUrl, nil)
+	if err != nil {
+		log.Fatalf("unable to get list of keys: %v\n", err)
+	}
+
+	var kb []keyvault.KeyBundle
+
+	for siter.NotDone() {
+		i := siter.Value()
+
+		key := path.Base(*i.Kid)
+		b, err := k.Client.GetKey(context.Background(), k.BaseUrl, key, "")
+		if err != nil {
+			return []keyvault.KeyBundle{}, err
+		}
+
+		kb = append(kb, b)
+		err = siter.NextWithContext(ctx)
+		if err != nil {
+			return []keyvault.KeyBundle{}, err
+		}
+	}
+
+	return kb, nil
+}
+
+// BackupKey - Create a backup of a key which can be used for restoring
+func (k *Keyvault) BackupKey(key string) (string, error) {
+
+	kb, err := k.Client.BackupKey(context.Background(), k.BaseUrl, key)
+	if err != nil {
+		return "", err
+	}
+
+	dec, err := base64.RawURLEncoding.DecodeString(*kb.Value)
+	if err != nil {
+		return "", err
+	}
+	return string(dec), nil
+}
+
+// CreateKey - create a keyvault key
+func (k *Keyvault) CreateKey(key string) (keyvault.KeyBundle, error) {
+
+	ks := KeySize
+	params := keyvault.KeyCreateParameters{
+		Kty:     KeyType,
+		KeySize: &ks,
+	}
+	kb, err := k.Client.CreateKey(context.Background(), k.BaseUrl, key, params)
+	if err != nil {
+		return keyvault.KeyBundle{}, err
+	}
+	return kb, nil
+}
+
+// GetKey - return a secret object
+func (k *Keyvault) GetKey(key string, version string) (keyvault.KeyBundle, error) {
+
+	s, err := k.Client.GetKey(context.Background(), k.BaseUrl, key, version)
+	if err != nil {
+		return keyvault.KeyBundle{}, err
+	}
+
+	return s, nil
+}
+
+// RestoreKey - restore a key via backup file
+func (k *Keyvault) RestoreKey(file string) (keyvault.KeyBundle, error) {
+
+	fr, err := os.ReadFile(file)
+	if err != nil {
+		return keyvault.KeyBundle{}, err
+	}
+	fc := base64.RawURLEncoding.EncodeToString(fr)
+
+	params := keyvault.KeyRestoreParameters{
+		KeyBundleBackup: &fc,
+	}
+
+	s, err := k.Client.RestoreKey(context.Background(), k.BaseUrl, params)
+	if err != nil {
+		return keyvault.KeyBundle{}, err
 	}
 
 	return s, nil
