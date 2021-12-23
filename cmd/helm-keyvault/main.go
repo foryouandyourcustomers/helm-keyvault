@@ -137,15 +137,15 @@ func run(args []string) error {
 						Usage: "Backup azure keyvault secret. The created backup can be imported into a keyvault and reused",
 						Flags: []cli.Flag{
 							&flagKeyVault,
-							&flagKey,
+							&flagSecret,
 							&flagBackupFile,
 						},
 						Action: func(c *cli.Context) error {
 							fn := c.String("file")
 							if fn == "" {
-								fn = fmt.Sprintf("%s.pem", strings.ToUpper(c.String("key")))
+								fn = fmt.Sprintf("%s.pem", strings.ToUpper(c.String("secret")))
 							}
-							return cmd.BackupSecret(c.String("keyvault"), c.String("key"), fn)
+							return cmd.BackupSecret(c.String("keyvault"), c.String("secret"), fn)
 						},
 					},
 				},
