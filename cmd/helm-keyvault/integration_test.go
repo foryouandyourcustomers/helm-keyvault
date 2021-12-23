@@ -1,4 +1,4 @@
-package helm_keyvault
+package main
 
 import (
 	"context"
@@ -9,8 +9,10 @@ import (
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore/policy"
 	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
 	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/keyvault/armkeyvault"
+	"github.com/foryouandyourcustomers/helm-keyvault/internal/keyvault"
 	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/suite"
+	"io/ioutil"
 	"math/rand"
 	"os"
 	"strings"
@@ -22,6 +24,29 @@ const (
 	VAULT_NAME_LENGTH              = 24
 	VAULT_LOCATION                 = "westeurope"
 	KEY_VAULT_ADMINISTRATOR_POLICY = "00482a5a-887f-4fb3-b363-3b7fe8e74483"
+
+	// test content for secrets and file encryption
+	// short: should create an encrypted file with a single chunk
+	// long: should create an encrypted file with NNNNN chunks
+	CONTENT_SHORT = `
+example:
+  key1: secretvalue1
+`
+
+	CONTENT_LONG = `
+{
+  "clientId": "<app registration app id>",
+  "clientSecret": "<app registration client secret>",
+  "subscriptionId": "<subscription id - optional>",
+  "tenantId": "<tenant id>",
+  "activeDirectoryEndpointUrl": "https://login.microsoftonline.com",
+  "resourceManagerEndpointUrl": "https://management.azure.com/",
+  "activeDirectoryGraphResourceId": "https://graph.windows.net/",
+  "sqlManagementEndpointUrl": "https://management.core.windows.net:8443/",
+  "galleryEndpointUrl": "https://gallery.azure.com/",
+  "managementEndpointUrl": "https://management.core.windows.net/"
+}
+`
 )
 
 // skipIntegration - skip integration tests if envrionment isnt specified
@@ -173,6 +198,39 @@ func removeKeyVault(resourcegroup string, keyvault string, vaultsClient *armkeyv
 	return nil
 }
 
+// runCli() - run the cli with the given arguments and return its output
+func runCli(args []string) ([]byte, error) {
+
+	// capture stdout
+	// https://stackoverflow.com/questions/10473800/in-go-how-do-i-capture-stdout-of-a-function-into-a-string
+	oldStdout := os.Stdout
+	r, w, _ := os.Pipe()
+	os.Stdout = w
+
+	// run cli
+	err := run(args)
+
+	// read in output
+	w.Close()
+	out, _ := ioutil.ReadAll(r)
+	os.Stdout = oldStdout
+
+	// return output and error of cli command
+	return out, err
+}
+
+// parseCliOutput - try to parse the given cli output as json object
+func parseCliOutput(output []byte) (map[string]interface{}, error) {
+
+	var parsed map[string]interface{}
+	err := json.Unmarshal(output, &parsed)
+	if err != nil {
+		return nil, err
+	}
+
+	return parsed, nil
+}
+
 // IntegrationTestSuite - Run keyvault integration tests
 // Attention: For the test suite to work the azure identity needs to have permissions
 // to create and delete keyvaults in the given resource group.
@@ -185,8 +243,8 @@ type IntegrationTestSuite struct {
 	AzureKeyVaultName  string
 	Credentials        *azidentity.DefaultAzureCredential
 	ObjectId           string
-	VaultsClient       *armkeyvault.VaultsClient
-	KeysClient         *armkeyvault.KeysClient
+	ArmVaultsClient    *armkeyvault.VaultsClient
+	KeyVaultClient     keyvault.Keyvault
 }
 
 // SetupSuite - Create Keyvault, Make sure
@@ -211,14 +269,16 @@ func (s *IntegrationTestSuite) SetupSuite() {
 	if s.AzureKeyVaultName == "" {
 		log.Fatalf("Please specify the AZURE_KEYVAULT_NAME to use for the integration tests.")
 	}
+
 	// append a random 8 char string to the keyvault name
 	// this for safety reasons as the test suite will remove the keyvault at the end of the run
 	// just to make sure no kind of race condition can lead to removal of a "real" keyvault
 	// make sure the keyvault name wont go over its max size when the random string is appended
-	if len(s.AzureKeyVaultName) > (VAULT_NAME_LENGTH - 8) {
-		s.AzureKeyVaultName = s.AzureKeyVaultName[0:(VAULT_NAME_LENGTH - 1 - 8)]
+	rs := randomString()
+	if len(s.AzureKeyVaultName) > (VAULT_NAME_LENGTH - len(rs)) {
+		s.AzureKeyVaultName = s.AzureKeyVaultName[0:(VAULT_NAME_LENGTH - 1 - len(rs))]
 	}
-	s.AzureKeyVaultName = fmt.Sprintf("%s-%s", s.AzureKeyVaultName, randomString())
+	s.AzureKeyVaultName = fmt.Sprintf("%s-%s", s.AzureKeyVaultName, rs)
 
 	log.Infof("Retrieve azure credentials")
 	// setup credentials object to be used with arm
@@ -233,18 +293,26 @@ func (s *IntegrationTestSuite) SetupSuite() {
 	}
 
 	log.Infof("Setup clients")
-	s.VaultsClient = getArmVaultClient(s.AzureSubscription, s.Credentials)
-	s.KeysClient = getArmKeysClient(s.AzureSubscription, s.Credentials)
+	// get arm client to manage keyvaults
+	s.ArmVaultsClient = getArmVaultClient(s.AzureSubscription, s.Credentials)
+	// get keyvault client to manage secrets and keys
+	s.KeyVaultClient = keyvault.Keyvault{}
+	s.KeyVaultClient.Authorizer, err = s.KeyVaultClient.NewAuthorizer()
+	s.KeyVaultClient.Client.Authorizer = s.KeyVaultClient.Authorizer
+	if err != nil {
+		log.Fatal(err)
+	}
+	s.KeyVaultClient.SetKeyvaultName(s.AzureKeyVaultName)
 
 	log.Infof("Create keyvault %s in resource group %s (subscription: %s)", s.AzureKeyVaultName, s.AzureResourceGroup, s.AzureSubscription)
 	//// check if keyvault exists. if it does abort the operation
-	_, err = getKeyVault(s.AzureResourceGroup, s.AzureKeyVaultName, s.VaultsClient)
-	if err == nil {
-		log.Fatalf("KeyVault %s already exists. Aborting", s.AzureKeyVaultName)
-	}
+	//_, err = getKeyVault(s.AzureResourceGroup, s.AzureKeyVaultName, s.ArmVaultsClient)
+	//if err == nil {
+	//	log.Fatalf("KeyVault %s already exists. Aborting", s.AzureKeyVaultName)
+	//}
 
 	// create the keyvault
-	err = createKeyVault(s.AzureResourceGroup, s.AzureKeyVaultName, s.AzureTenantId, s.ObjectId, s.VaultsClient)
+	err = createKeyVault(s.AzureResourceGroup, s.AzureKeyVaultName, s.AzureTenantId, s.ObjectId, s.ArmVaultsClient)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -260,7 +328,7 @@ func (s *IntegrationTestSuite) TearDownSuite() {
 
 	log.Infof("Remove keyvault %s in resource group %s (subscription: %s)", s.AzureKeyVaultName, s.AzureResourceGroup, s.AzureSubscription)
 
-	_, err := getKeyVault(s.AzureResourceGroup, s.AzureKeyVaultName, s.VaultsClient)
+	_, err := getKeyVault(s.AzureResourceGroup, s.AzureKeyVaultName, s.ArmVaultsClient)
 	if err != nil {
 		// keyvault doesnt exist, nothing to do here
 		return
@@ -281,19 +349,13 @@ func (s *IntegrationTestSuite) TearDownSuite() {
 	//}
 
 	//// keyvault exists so lets remove it
-	//err = removeKeyVault(s.AzureResourceGroup, s.AzureKeyVaultName, s.VaultsClient)
+	//err = removeKeyVault(s.AzureResourceGroup, s.AzureKeyVaultName, s.ArmVaultsClient)
 	//if err != nil {
 	//	log.Fatal(err)
 	//}
 
 }
 
-// All methods that begin with "Test" are run as tests within a
-// suite.
-func (suite *IntegrationTestSuite) TestCreateKey() {
-
-	suite.Equal(suite.AzureResourceGroup, "")
-}
 func TestExampleTestSuite(t *testing.T) {
 	skipIntegration(t)
 	suite.Run(t, new(IntegrationTestSuite))
