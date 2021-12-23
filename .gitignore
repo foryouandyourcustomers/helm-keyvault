@@ -3,3 +3,4 @@ helm-keyvault
 .env
 auth.json
 *.pem
+coverage*
