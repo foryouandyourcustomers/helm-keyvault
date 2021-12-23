@@ -10,6 +10,7 @@ import (
 	"github.com/Azure/go-autorest/autorest"
 	"github.com/Azure/go-autorest/autorest/azure"
 	log "github.com/sirupsen/logrus"
+	"os"
 	"path"
 )
 
@@ -119,6 +120,27 @@ func (k *Keyvault) BackupSecret(secret string) (string, error) {
 		return "", err
 	}
 	return string(dec), nil
+}
+
+// RestoreSecret - restore a secret via backup file
+func (k *Keyvault) RestoreSecret(file string) (keyvault.SecretBundle, error) {
+
+	fr, err := os.ReadFile(file)
+	if err != nil {
+		return keyvault.SecretBundle{}, err
+	}
+	fc := base64.RawURLEncoding.EncodeToString(fr)
+
+	params := keyvault.SecretRestoreParameters{
+		SecretBundleBackup: &fc,
+	}
+
+	s, err := k.Client.RestoreSecret(context.Background(), k.BaseUrl, params)
+	if err != nil {
+		return keyvault.SecretBundle{}, err
+	}
+
+	return s, nil
 }
 
 // ListSecrets - list all secrets in the specified keyvault
@@ -246,6 +268,27 @@ func (k *Keyvault) CreateKey(key string) (keyvault.KeyBundle, error) {
 func (k *Keyvault) GetKey(key string, version string) (keyvault.KeyBundle, error) {
 
 	s, err := k.Client.GetKey(context.Background(), k.BaseUrl, key, version)
+	if err != nil {
+		return keyvault.KeyBundle{}, err
+	}
+
+	return s, nil
+}
+
+// RestoreKey - restore a key via backup file
+func (k *Keyvault) RestoreKey(file string) (keyvault.KeyBundle, error) {
+
+	fr, err := os.ReadFile(file)
+	if err != nil {
+		return keyvault.KeyBundle{}, err
+	}
+	fc := base64.RawURLEncoding.EncodeToString(fr)
+
+	params := keyvault.KeyRestoreParameters{
+		KeyBundleBackup: &fc,
+	}
+
+	s, err := k.Client.RestoreKey(context.Background(), k.BaseUrl, params)
 	if err != nil {
 		return keyvault.KeyBundle{}, err
 	}
