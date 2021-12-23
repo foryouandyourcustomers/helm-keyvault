@@ -47,7 +47,9 @@ func (suite *IntegrationTestSuite) TestCreateAndGetKey() {
 	// delete key
 	log.Info("Removing key")
 	_, err = suite.KeyVaultClient.Client.DeleteKey(context.Background(), suite.KeyVaultClient.BaseUrl, key)
-	log.Warningln(err)
+	if err != nil {
+		log.Warningln(err)
+	}
 }
 
 // TestBackupAndRestoreKey - Create a key and a backup file. Delete and restore the key

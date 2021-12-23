@@ -27,14 +27,12 @@ const (
 
 	// test content for secrets and file encryption
 	// short: should create an encrypted file with a single chunk
-	// long: should create an encrypted file with NNNNN chunks
-	CONTENT_SHORT = `
-example:
+	// long: should create an encrypted file with 2 chunks
+	CONTENT_SHORT = `example:
   key1: secretvalue1
 `
 
-	CONTENT_LONG = `
-{
+	CONTENT_LONG = `{
   "clientId": "<app registration app id>",
   "clientSecret": "<app registration client secret>",
   "subscriptionId": "<subscription id - optional>",
@@ -305,11 +303,11 @@ func (s *IntegrationTestSuite) SetupSuite() {
 	s.KeyVaultClient.SetKeyvaultName(s.AzureKeyVaultName)
 
 	log.Infof("Create keyvault %s in resource group %s (subscription: %s)", s.AzureKeyVaultName, s.AzureResourceGroup, s.AzureSubscription)
-	//// check if keyvault exists. if it does abort the operation
-	//_, err = getKeyVault(s.AzureResourceGroup, s.AzureKeyVaultName, s.ArmVaultsClient)
-	//if err == nil {
-	//	log.Fatalf("KeyVault %s already exists. Aborting", s.AzureKeyVaultName)
-	//}
+	// check if keyvault exists. if it does abort the operation
+	_, err = getKeyVault(s.AzureResourceGroup, s.AzureKeyVaultName, s.ArmVaultsClient)
+	if err == nil {
+		log.Fatalf("KeyVault %s already exists. Aborting", s.AzureKeyVaultName)
+	}
 
 	// create the keyvault
 	err = createKeyVault(s.AzureResourceGroup, s.AzureKeyVaultName, s.AzureTenantId, s.ObjectId, s.ArmVaultsClient)
@@ -334,25 +332,11 @@ func (s *IntegrationTestSuite) TearDownSuite() {
 		return
 	}
 
-	//kty := armkeyvault.JSONWebKeyTypeRSA
-	//props := armkeyvault.KeyProperties{
-	//	KeySize: func(s int32) *int32 { return &s }(4096),
-	//	Kty:     &kty,
-	//}
-	//params := armkeyvault.KeyCreateParameters{
-	//	Properties: &props,
-	//}
-	//
-	//_, err = s.KeysClient.CreateIfNotExist(context.Background(), s.AzureResourceGroup, s.AzureKeyVaultName, "mykey", params, nil)
-	//if err != nil {
-	//	log.Fatal(err)
-	//}
-
-	//// keyvault exists so lets remove it
-	//err = removeKeyVault(s.AzureResourceGroup, s.AzureKeyVaultName, s.ArmVaultsClient)
-	//if err != nil {
-	//	log.Fatal(err)
-	//}
+	// keyvault exists so lets remove it
+	err = removeKeyVault(s.AzureResourceGroup, s.AzureKeyVaultName, s.ArmVaultsClient)
+	if err != nil {
+		log.Fatal(err)
+	}
 
 }
 

@@ -104,7 +104,9 @@ func (suite *IntegrationTestSuite) TestCreateAndGetSecret() {
 	// delete secret
 	log.Info("Removing secret")
 	_, err = suite.KeyVaultClient.Client.DeleteKey(context.Background(), suite.KeyVaultClient.BaseUrl, secret)
-	log.Warningln(err)
+	if err != nil {
+		log.Warningln(err)
+	}
 }
 
 // TestBackupAndRestoreSecret - Create a secret and a backup file. Delete and restore the secret
@@ -115,7 +117,7 @@ func (suite *IntegrationTestSuite) TestBackupAndRestoreSecret() {
 	// helm-keyvault secret backup --keyvault <keyvaultname> --secret "TestBackupAndRestoreSecret"
 
 	// write files with example values
-	shortFile, err := ioutil.TempFile(os.TempDir(), "TestCreateAndGetSecret")
+	shortFile, err := ioutil.TempFile(os.TempDir(), "TestBackupAndRestoreSecret")
 	if err != nil {
 		log.Fatal("Cannot create temporary file", err)
 	}
@@ -182,7 +184,7 @@ func (suite *IntegrationTestSuite) TestListSecrets() {
 	// helm-keyvault secret list --keyvault <keyvaultname>
 
 	// write files with example values
-	shortFile, err := ioutil.TempFile(os.TempDir(), "TestCreateAndGetSecret")
+	shortFile, err := ioutil.TempFile(os.TempDir(), "TestListSecrets")
 	if err != nil {
 		log.Fatal("Cannot create temporary file", err)
 	}
@@ -218,5 +220,7 @@ func (suite *IntegrationTestSuite) TestListSecrets() {
 	// delete secret
 	log.Info("Removing secret")
 	_, err = suite.KeyVaultClient.Client.DeleteKey(context.Background(), suite.KeyVaultClient.BaseUrl, secret)
-	log.Warningln(err)
+	if err != nil {
+		log.Warningln(err)
+	}
 }
