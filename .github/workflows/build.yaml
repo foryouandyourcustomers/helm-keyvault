@@ -19,17 +19,58 @@ jobs:
       - name: checkout sources
         uses: actions/checkout@v2
 
-      - name: Run Go Tests
-        run: go test -v -covermode=count -coverprofile=coverage.out ./...
+      #
+      # run unit and integration tests
+      #
+
+      - name: Run Go Unit Tests
+        run: go test -v -covermode=count -coverprofile=coverage-unit.out ./...
+
+      - uses: azure/login@v1
+        with:
+          creds: ${{ secrets.AZURE_SERVICE_PRINCIPAL_HELM_KEYVAULT_INTEGRATION }}
+          allow-no-subscriptions: true
+
+      - name: Run integration tests
+        run: go test -v -covermode=count -coverprofile=coverage-integration.out ./cmd/helm-keyvault
+        env:
+          INTEGRATION: "yes"
+          AZURE_SUBSCRIPTION: "c2a322e5-83ef-41b0-ba56-0837e9ffcf53"
+          AZURE_RESOURCE_GROUP: "helm-keyvault-integration"
+          AZURE_KEYVAULT_NAME: "fyayc-hkv-integ"
+          AZURE_TENANT_ID: "e1faa3ce-6181-47ad-abcc-9154da4f981e"
+
+
+      #
+      # coverage report
+      #
+
       # https://github.com/jandelgado/golang-ci-template-github-actions/blob/master/.github/workflows/test.yml
-      - name: Convert coverage.out to coverage.lcov
+      - name: Convert coverage-unit.out to coverage-unit.lcov
         uses: jandelgado/gcov2lcov-action@v1.0.6
-      - name: Coveralls
+        with:
+          infile: coverage-unit.out
+          outfile: coverage-unit.lcov
+      - name: Convert coverage-integration.out to coverage-integration.lcov
+        uses: jandelgado/gcov2lcov-action@v1.0.6
+        with:
+          infile: coverage-integration.out
+          outfile: coverage-integration.lcov
+      - name: Coveralls for unit tests
         uses: coverallsapp/github-action@master
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
-          path-to-lcov: coverage.lcov
-             
+          path-to-lcov: coverage-unit.lcov
+      - name: Coveralls for integration tests
+        uses: coverallsapp/github-action@master
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          path-to-lcov: coverage-integration.lcov
+                        
+      #
+      # go release (only on tag!)
+      #
+                        
       - name: Run GoReleaser
         uses: goreleaser/goreleaser-action@v2
         # only create a release on a new tag
