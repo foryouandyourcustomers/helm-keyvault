@@ -58,7 +58,7 @@ func skipIntegration(t *testing.T) {
 // https://golangdocs.com/generate-random-string-in-golang
 func randomString() string {
 	var letters = []rune("abcdefghijklmnopqrstuvwxyz0123456789")
-
+	rand.Seed(time.Now().UnixNano())
 	s := make([]rune, 8)
 	for i := range s {
 		s[i] = letters[rand.Intn(len(letters))]
