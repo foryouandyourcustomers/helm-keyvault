@@ -23,11 +23,8 @@ jobs:
       # run unit and integration tests
       #
 
-      - name: Run unit Tests
-        run: go test -v -covermode=count -coverprofile=coverage-unit.out ./...
-
-      - name: Run integration tests
-        run: go test -v -covermode=count -coverprofile=coverage-integration.out ./cmd/helm-keyvault
+      - name: Run unit and integration tests Tests
+        run: go test -v -covermode=count -coverprofile=coverage.out ./...
         env:
           INTEGRATION: "yes"
           AZURE_SUBSCRIPTION: "c2a322e5-83ef-41b0-ba56-0837e9ffcf53"
@@ -36,33 +33,28 @@ jobs:
           AZURE_TENANT_ID: "e1faa3ce-6181-47ad-abcc-9154da4f981e"
           AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
           AZURE_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
+#
+#      - name: Run integration tests
+#        run: go test -v -covermode=count -coverprofile=coverage-integration.out ./cmd/helm-keyvault
+
 
       #
       # coverage report
       #
 
       # https://github.com/jandelgado/golang-ci-template-github-actions/blob/master/.github/workflows/test.yml
-      - name: Convert coverage-unit.out to coverage-unit.lcov
+      - name: Convert coverage.out to coverage.lcov
         uses: jandelgado/gcov2lcov-action@v1.0.6
         with:
-          infile: coverage-unit.out
-          outfile: coverage-unit.lcov
-      - name: Convert coverage-integration.out to coverage-integration.lcov
-        uses: jandelgado/gcov2lcov-action@v1.0.6
-        with:
-          infile: coverage-integration.out
-          outfile: coverage-integration.lcov
+          infile: coverage.out
+          outfile: coverage.lcov
+
       - name: Coveralls for unit tests
         uses: coverallsapp/github-action@master
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
-          path-to-lcov: coverage-unit.lcov
-      - name: Coveralls for integration tests
-        uses: coverallsapp/github-action@master
-        with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          path-to-lcov: coverage-integration.lcov
-                        
+          path-to-lcov: coverage.lcov
+
       #
       # go release (only on tag!)
       #
