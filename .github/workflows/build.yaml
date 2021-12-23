@@ -40,7 +40,6 @@ jobs:
           AZURE_KEYVAULT_NAME: "fyayc-hkv-integ"
           AZURE_TENANT_ID: "e1faa3ce-6181-47ad-abcc-9154da4f981e"
 
-
       #
       # coverage report
       #
