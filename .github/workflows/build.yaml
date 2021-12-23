@@ -23,7 +23,7 @@ jobs:
       # run unit and integration tests
       #
 
-      - name: Run Go Unit Tests
+      - name: Run unit Tests
         run: go test -v -covermode=count -coverprofile=coverage-unit.out ./...
 
       - uses: azure/login@v1
