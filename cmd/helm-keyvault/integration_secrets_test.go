@@ -175,7 +175,7 @@ func (suite *IntegrationTestSuite) TestBackupAndRestoreSecret() {
 	}
 }
 
-// TestListKeys - Create a secret and list all available secrets. As operations run in parallel the test
+// TestListSecrets - Create a secret and list all available secrets. As operations run in parallel the test
 // succeeds if at least 1 secret is retrieved from the keyvault
 func (suite *IntegrationTestSuite) TestListSecrets() {
 
@@ -195,7 +195,7 @@ func (suite *IntegrationTestSuite) TestListSecrets() {
 	}
 
 	// test values
-	secret := "TestListKeys"
+	secret := "TestListSecrets"
 	createArgs := os.Args[0:1]
 	createArgs = append(createArgs, "secret", "put", "--keyvault", suite.AzureKeyVaultName, "--secret", secret, "--file", shortFile.Name())
 	listArgs := os.Args[0:1]
