@@ -77,6 +77,14 @@ func run(args []string) error {
 	flagVersionOptional.Usage = "Use alternate version for decryption"
 
 	app := &cli.App{
+		Name:  "helm-keyvault",
+		Usage: "Manage Azure Keyvault secrets and keys to safely store and download helm charts.",
+		Authors: []*cli.Author{
+			&cli.Author{
+				Name:  "Sebastian Hutter",
+				Email: "seh@foryouandyourcustomers.com",
+			},
+		},
 		Commands: []*cli.Command{
 			{
 				Name:  "download",
