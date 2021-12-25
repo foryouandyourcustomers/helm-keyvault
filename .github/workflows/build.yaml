@@ -27,7 +27,7 @@ jobs:
         run: go test -v -covermode=count -coverprofile=coverage.out ./...
         env:
           INTEGRATION: "yes"
-          AZURE_SUBSCRIPTION: "c2a322e5-83ef-41b0-ba56-0837e9ffcf53"
+          AZURE_SUBSCRIPTION: "2dc709f5-ddb9-47dd-a0ac-4582d7d2041f"
           AZURE_RESOURCE_GROUP: "helm-keyvault-integration"
           AZURE_KEYVAULT_NAME: "fyayc-hkv-integ"
           AZURE_TENANT_ID: "e1faa3ce-6181-47ad-abcc-9154da4f981e"
